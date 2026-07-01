@@ -1,24 +1,23 @@
 "use client";
 
 import React from "react";
-import { Download, Search, Settings } from "lucide-react";
+import { Download, Search } from "lucide-react";
+import { usePathname } from "next/navigation";
 
-interface HeaderProps {
-  activeTab: string;
-}
+export default function DashboardHeader() {
+  const pathname = usePathname();
 
-export default function DashboardHeader({ activeTab }: HeaderProps) {
   const getTabDetails = () => {
-    switch (activeTab) {
-      case "overview":
+    switch (pathname) {
+      case "/dashboard":
         return { title: "Dashboard Overview", desc: "Monitor tool invocations, active agents, and API usage." };
-      case "agents":
+      case "/dashboard/agents":
         return { title: "Active Assistants", desc: "Configure and track AI agents connected to your workspace." };
-      case "tools":
+      case "/dashboard/tools":
         return { title: "Tool Registry & Sandbox", desc: "Browse the repository of tools and run test simulations." };
-      case "keys":
+      case "/dashboard/keys":
         return { title: "Developer API Keys", desc: "Manage authentication tokens for the REST API and MCP server." };
-      case "logs":
+      case "/dashboard/logs":
         return { title: "Security Audit Logs", desc: "Review complete histories of secure operations and payloads." };
       default:
         return { title: "Workspace", desc: "ZeBridge developer workspace" };

@@ -9,25 +9,25 @@ import {
   Key, 
   Terminal, 
   LogOut, 
-  User, 
   ArrowLeft 
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface SidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   user: { name: string; email: string; plan: string } | null;
   onLogout: () => void;
 }
 
-export default function DashboardSidebar({ activeTab, setActiveTab, user, onLogout }: SidebarProps) {
+export default function DashboardSidebar({ user, onLogout }: SidebarProps) {
+  const pathname = usePathname();
+
   const menuItems = [
-    { id: "overview", label: "Overview", icon: Activity },
-    { id: "agents", label: "Active Agents", icon: Cpu, badge: "3" },
-    { id: "tools", label: "Tool Registry", icon: FileCode },
-    { id: "keys", label: "API Keys", icon: Key },
-    { id: "logs", label: "Audit Logs", icon: Terminal },
+    { id: "overview", label: "Overview", href: "/dashboard", icon: Activity },
+    { id: "agents", label: "Active Agents", href: "/dashboard/agents", icon: Cpu, badge: "3" },
+    { id: "tools", label: "Tool Registry", href: "/dashboard/tools", icon: FileCode },
+    { id: "keys", label: "API Keys", href: "/dashboard/keys", icon: Key },
+    { id: "logs", label: "Audit Logs", href: "/dashboard/logs", icon: Terminal },
   ];
 
   return (
@@ -60,11 +60,11 @@ export default function DashboardSidebar({ activeTab, setActiveTab, user, onLogo
         <nav className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive = pathname === item.href;
             return (
-              <button
+              <Link
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                href={item.href}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 relative ${
                   isActive 
                     ? "bg-gradient-to-r from-emerald-500/10 to-transparent text-white border-l-2 border-emerald-400" 
@@ -78,7 +78,7 @@ export default function DashboardSidebar({ activeTab, setActiveTab, user, onLogo
                     {item.badge}
                   </span>
                 )}
-              </button>
+              </Link>
             );
           })}
         </nav>

@@ -29,10 +29,10 @@ export default function AgentsTab() {
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "command": "npx",
-      "args": ["-y", "@zebridge/mcp-server"],
-      "env": {
-        "ZEBRIDGE_API_KEY": "zb_prod_8f3a1d9e2c4b..."
+      "type": "sse",
+      "url": "https://zebridge.io/mcp",
+      "headers": {
+        "Authorization": "Bearer zb_prod_8f3a1d9e2c4b..."
       }
     }
   }
@@ -45,8 +45,8 @@ export default function AgentsTab() {
       requests: "2,094",
       lastSeen: "3m ago",
       latency: "19ms",
-      configType: "command",
-      configBlock: "npx -y @zebridge/mcp-server --key zb_prod_8f3a1d9e2c4b..."
+      configType: "url",
+      configBlock: "https://zebridge.io/mcp?key=zb_prod_8f3a1d9e2c4b..."
     },
     {
       name: "Windsurf",
@@ -59,10 +59,10 @@ export default function AgentsTab() {
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "command": "npx",
-      "args": ["-y", "@zebridge/mcp-server"],
-      "env": {
-        "ZEBRIDGE_API_KEY": "zb_prod_8f3a1d9e2c4b..."
+      "type": "sse",
+      "url": "https://zebridge.io/mcp",
+      "headers": {
+        "Authorization": "Bearer zb_prod_8f3a1d9e2c4b..."
       }
     }
   }

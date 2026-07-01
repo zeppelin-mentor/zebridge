@@ -56,12 +56,13 @@ export default function Hero() {
               </Link>
             </div>
 
-            {/* CLI Prompt Banner */}
+            {/* Endpoint Connection Banner */}
             <div className="max-w-md rounded-xl border border-white/5 bg-slate-950/80 px-4 py-3 backdrop-blur-md">
               <code className="text-xs md:text-sm text-slate-300 flex items-center justify-between gap-3">
-                <span className="text-emerald-400 font-mono">$ npm install -g @zebridge/mcp-server</span>
+                <span className="text-slate-400 font-mono">MCP Endpoint:</span>
+                <span className="text-emerald-400 font-mono">https://zebridge.io/mcp</span>
                 <button 
-                  onClick={() => navigator.clipboard.writeText("npm install -g @zebridge/mcp-server")}
+                  onClick={() => navigator.clipboard.writeText("https://zebridge.io/mcp")}
                   className="text-xs text-slate-500 hover:text-white transition-colors"
                   title="Copy to clipboard"
                 >
