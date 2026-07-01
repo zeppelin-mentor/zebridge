@@ -10,7 +10,7 @@ interface AgentItem {
   requests: string;
   lastSeen: string;
   latency: string;
-  configType: "json" | "command";
+  configType: "json" | "url" | "command";
   configBlock: string;
 }
 
