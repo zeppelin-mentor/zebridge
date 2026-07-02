@@ -16,6 +16,13 @@ interface AgentItem {
 
 export default function AgentsTab() {
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  
+  // Get the current app URL from environment or window location
+  const appUrl = typeof window !== 'undefined' 
+    ? window.location.origin 
+    : (process.env.NEXT_PUBLIC_APP_URL || 'https://zebridge.vercel.app');
+  
+  const mcpUrl = `${appUrl}/mcp`;
 
   const agents: AgentItem[] = [
     {
@@ -29,7 +36,7 @@ export default function AgentsTab() {
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "url": "http://localhost:3000/mcp",
+      "url": "${mcpUrl}",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
@@ -63,7 +70,7 @@ export default function AgentsTab() {
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "url": "https://zebridge.io/mcp",
+      "url": "${appUrl}/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
@@ -86,7 +93,7 @@ export default function AgentsTab() {
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "url": "https://zebridge.io/mcp",
+      "url": "${appUrl}/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
@@ -108,7 +115,7 @@ export default function AgentsTab() {
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "url": "https://zebridge.io/mcp",
+      "url": "${appUrl}/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }

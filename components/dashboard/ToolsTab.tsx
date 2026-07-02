@@ -37,6 +37,9 @@ export default function ToolsTab() {
   const [mockFileName, setMockFileName] = useState("sample_avatar.png");
   const [isFinished, setIsFinished] = useState(false);
   const [outputFileUrl, setOutputFileUrl] = useState<string | null>(null);
+  
+  // Dynamic input state
+  const [toolInputs, setToolInputs] = useState<Record<string, any>>({});
 
   const toolsList: ToolItem[] = [
     // PDF
@@ -75,6 +78,10 @@ export default function ToolsTab() {
     setProgress(0);
     setLogs([]);
     setOutputFileUrl(null);
+    
+    // Initialize default inputs for the tool
+    setToolInputs(getDefaultInputsForTool(tool.slug));
+    
     if (tool.category === "PDF") {
       setMockFileName("annual_report_draft.pdf");
     } else if (tool.category === "Images") {
@@ -82,6 +89,74 @@ export default function ToolsTab() {
     } else {
       setMockFileName("input_dataset.json");
     }
+  };
+
+  const getDefaultInputsForTool = (slug: string): Record<string, any> => {
+    const defaults: Record<string, any> = {
+      'pdf-merge': {
+        pdfUrls: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+      },
+      'pdf-split': {
+        pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        ranges: '[[1, 1]]'
+      },
+      'markdown-to-pdf': {
+        markdown: '# Test Document\n\nThis is a **sandbox test** of the markdown-to-pdf tool.\n\n- Item 1\n- Item 2',
+        title: 'Sandbox Test'
+      },
+      'html-to-pdf': {
+        html: '<html><body><h1>Sandbox Test</h1><p>This is a test HTML document.</p></body></html>',
+        title: 'Sandbox Test'
+      },
+      'remove-background': {
+        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+        outputFormat: 'png'
+      },
+      'image-upscale': {
+        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
+        scaleFactor: '2x'
+      },
+      'text-to-docx': {
+        text: 'This is a sandbox test of the text-to-docx tool.\n\nIt converts plain text into formatted Word documents.',
+        title: 'Sandbox Test'
+      },
+      'json-to-excel': {
+        data: '[{"id": 1, "name": "Test Item", "value": 100}, {"id": 2, "name": "Another Item", "value": 200}]',
+        sheetName: 'Sandbox Test'
+      },
+      'generate-receipt': {
+        receiptNumber: 'SANDBOX-001',
+        date: new Date().toISOString().split('T')[0],
+        items: '[{"description": "Test Item", "quantity": 1, "price": 50}]',
+        total: '50',
+        fromName: 'ZeBridge',
+        fromEmail: 'test@zebridge.com',
+        toName: 'Sandbox User',
+        toEmail: 'user@example.com'
+      },
+      'generate-invoice': {
+        invoiceNumber: 'SANDBOX-001',
+        date: new Date().toISOString().split('T')[0],
+        fromName: 'ZeBridge',
+        fromAddress: '123 Test St',
+        fromEmail: 'test@zebridge.com',
+        toName: 'Sandbox User',
+        toAddress: '456 User Ave',
+        toEmail: 'user@example.com',
+        items: '[{"description": "Test Service", "quantity": 1, "unitPrice": 100, "total": 100}]',
+        currency: 'USD'
+      },
+      'ocr-extract-text': {
+        imageUrl: 'https://images.unsplash.com/photo-1568667256549-094345857637?w=400',
+        language: 'eng'
+      },
+      'generate-qrcode': {
+        data: 'https://zebridge.vercel.app',
+        size: '256'
+      }
+    };
+    
+    return defaults[slug] || {};
   };
 
   const executeSandboxTool = async () => {
@@ -116,7 +191,7 @@ export default function ToolsTab() {
 
       // Prepare test data based on tool
       setLogs(prev => [...prev, `[PREPARE] Building test payload for ${selectedTool.slug}...`]);
-      const testData = getTestDataForTool(selectedTool.slug);
+      const testData = buildToolPayload(selectedTool.slug, toolInputs);
       setProgress(40);
 
       // Call the actual API endpoint
@@ -160,73 +235,553 @@ export default function ToolsTab() {
     }
   };
 
-  const getTestDataForTool = (slug: string): any => {
-    const testDataMap: Record<string, any> = {
-      'pdf-merge': {
-        pdfUrls: ['https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf']
-      },
-      'pdf-split': {
-        pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        ranges: [[1, 1]]
-      },
-      'markdown-to-pdf': {
-        markdown: '# Test Document\n\nThis is a **sandbox test** of the markdown-to-pdf tool.\n\n- Item 1\n- Item 2',
-        title: 'Sandbox Test'
-      },
-      'html-to-pdf': {
-        html: '<html><body><h1>Sandbox Test</h1><p>This is a test HTML document.</p></body></html>',
-        title: 'Sandbox Test'
-      },
-      'remove-background': {
-        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-        outputFormat: 'png'
-      },
-      'image-upscale': {
-        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
-        scaleFactor: '2x'
-      },
-      'text-to-docx': {
-        text: 'This is a sandbox test of the text-to-docx tool.\n\nIt converts plain text into formatted Word documents.',
-        title: 'Sandbox Test'
-      },
-      'json-to-excel': {
-        data: [
-          { id: 1, name: 'Test Item', value: 100 },
-          { id: 2, name: 'Another Item', value: 200 }
-        ],
-        sheetName: 'Sandbox Test'
-      },
-      'generate-receipt': {
-        receiptNumber: 'SANDBOX-001',
-        date: new Date().toISOString().split('T')[0],
-        items: [
-          { description: 'Test Item', quantity: 1, price: 50 }
-        ],
-        total: 50,
-        from: { name: 'ZeBridge', email: 'test@zebridge.com' },
-        to: { name: 'Sandbox User', email: 'user@example.com' }
-      },
-      'generate-invoice': {
-        invoiceNumber: 'SANDBOX-001',
-        date: new Date().toISOString().split('T')[0],
-        from: { name: 'ZeBridge', address: '123 Test St', email: 'test@zebridge.com' },
-        to: { name: 'Sandbox User', address: '456 User Ave', email: 'user@example.com' },
-        items: [
-          { description: 'Test Service', quantity: 1, unitPrice: 100, total: 100 }
-        ],
-        currency: 'USD'
-      },
-      'ocr-extract-text': {
-        imageUrl: 'https://images.unsplash.com/photo-1568667256549-094345857637?w=400',
-        language: 'eng'
-      },
-      'generate-qrcode': {
-        data: 'https://zebridge.com',
-        size: 256
+  const buildToolPayload = (slug: string, inputs: Record<string, any>): any => {
+    try {
+      switch (slug) {
+        case 'pdf-merge':
+          return {
+            pdfUrls: inputs.pdfUrls.split('\n').filter((url: string) => url.trim())
+          };
+        case 'pdf-split':
+          return {
+            pdfUrl: inputs.pdfUrl,
+            ranges: JSON.parse(inputs.ranges)
+          };
+        case 'markdown-to-pdf':
+          return {
+            markdown: inputs.markdown,
+            title: inputs.title
+          };
+        case 'html-to-pdf':
+          return {
+            html: inputs.html,
+            title: inputs.title
+          };
+        case 'remove-background':
+          return {
+            imageUrl: inputs.imageUrl,
+            outputFormat: inputs.outputFormat
+          };
+        case 'image-upscale':
+          return {
+            imageUrl: inputs.imageUrl,
+            scaleFactor: inputs.scaleFactor
+          };
+        case 'text-to-docx':
+          return {
+            text: inputs.text,
+            title: inputs.title
+          };
+        case 'json-to-excel':
+          return {
+            data: JSON.parse(inputs.data),
+            sheetName: inputs.sheetName
+          };
+        case 'generate-receipt':
+          return {
+            receiptNumber: inputs.receiptNumber,
+            date: inputs.date,
+            items: JSON.parse(inputs.items),
+            total: parseFloat(inputs.total),
+            from: { name: inputs.fromName, email: inputs.fromEmail },
+            to: { name: inputs.toName, email: inputs.toEmail }
+          };
+        case 'generate-invoice':
+          return {
+            invoiceNumber: inputs.invoiceNumber,
+            date: inputs.date,
+            from: { name: inputs.fromName, address: inputs.fromAddress, email: inputs.fromEmail },
+            to: { name: inputs.toName, address: inputs.toAddress, email: inputs.toEmail },
+            items: JSON.parse(inputs.items),
+            currency: inputs.currency
+          };
+        case 'ocr-extract-text':
+          return {
+            imageUrl: inputs.imageUrl,
+            language: inputs.language
+          };
+        case 'generate-qrcode':
+          return {
+            data: inputs.data,
+            size: parseInt(inputs.size)
+          };
+        default:
+          return {};
       }
+    } catch (error) {
+      throw new Error(`Invalid input format: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const renderInputFields = () => {
+    if (!selectedTool) return null;
+
+    const updateInput = (key: string, value: any) => {
+      setToolInputs(prev => ({ ...prev, [key]: value }));
     };
 
-    return testDataMap[slug] || {};
+    const inputClass = "w-full px-3 py-2 text-xs rounded-lg bg-slate-950 border border-white/5 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-400/40";
+    const labelClass = "text-[10px] text-slate-400 font-mono uppercase tracking-wider block mb-1.5";
+
+    switch (selectedTool.slug) {
+      case 'pdf-merge':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>PDF URLs (one per line)</label>
+              <textarea
+                value={toolInputs.pdfUrls || ''}
+                onChange={(e) => updateInput('pdfUrls', e.target.value)}
+                className={inputClass}
+                rows={3}
+                placeholder="https://example.com/file1.pdf&#10;https://example.com/file2.pdf"
+              />
+            </div>
+          </div>
+        );
+
+      case 'pdf-split':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>PDF URL</label>
+              <input
+                type="text"
+                value={toolInputs.pdfUrl || ''}
+                onChange={(e) => updateInput('pdfUrl', e.target.value)}
+                className={inputClass}
+                placeholder="https://example.com/document.pdf"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Ranges (JSON Array)</label>
+              <input
+                type="text"
+                value={toolInputs.ranges || ''}
+                onChange={(e) => updateInput('ranges', e.target.value)}
+                className={inputClass}
+                placeholder="[[1, 3], [5, 7]]"
+              />
+            </div>
+          </div>
+        );
+
+      case 'markdown-to-pdf':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Title</label>
+              <input
+                type="text"
+                value={toolInputs.title || ''}
+                onChange={(e) => updateInput('title', e.target.value)}
+                className={inputClass}
+                placeholder="Document Title"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Markdown Content</label>
+              <textarea
+                value={toolInputs.markdown || ''}
+                onChange={(e) => updateInput('markdown', e.target.value)}
+                className={inputClass}
+                rows={4}
+                placeholder="# Heading&#10;&#10;Your markdown content here..."
+              />
+            </div>
+          </div>
+        );
+
+      case 'html-to-pdf':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Title</label>
+              <input
+                type="text"
+                value={toolInputs.title || ''}
+                onChange={(e) => updateInput('title', e.target.value)}
+                className={inputClass}
+                placeholder="Document Title"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>HTML Content</label>
+              <textarea
+                value={toolInputs.html || ''}
+                onChange={(e) => updateInput('html', e.target.value)}
+                className={inputClass}
+                rows={4}
+                placeholder="<html><body>...</body></html>"
+              />
+            </div>
+          </div>
+        );
+
+      case 'remove-background':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Image URL</label>
+              <input
+                type="text"
+                value={toolInputs.imageUrl || ''}
+                onChange={(e) => updateInput('imageUrl', e.target.value)}
+                className={inputClass}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Output Format</label>
+              <select
+                value={toolInputs.outputFormat || 'png'}
+                onChange={(e) => updateInput('outputFormat', e.target.value)}
+                className={inputClass}
+              >
+                <option value="png">PNG</option>
+                <option value="webp">WebP</option>
+              </select>
+            </div>
+          </div>
+        );
+
+      case 'image-upscale':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Image URL</label>
+              <input
+                type="text"
+                value={toolInputs.imageUrl || ''}
+                onChange={(e) => updateInput('imageUrl', e.target.value)}
+                className={inputClass}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Scale Factor</label>
+              <select
+                value={toolInputs.scaleFactor || '2x'}
+                onChange={(e) => updateInput('scaleFactor', e.target.value)}
+                className={inputClass}
+              >
+                <option value="2x">2x</option>
+                <option value="4x">4x</option>
+              </select>
+            </div>
+          </div>
+        );
+
+      case 'text-to-docx':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Title</label>
+              <input
+                type="text"
+                value={toolInputs.title || ''}
+                onChange={(e) => updateInput('title', e.target.value)}
+                className={inputClass}
+                placeholder="Document Title"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Text Content</label>
+              <textarea
+                value={toolInputs.text || ''}
+                onChange={(e) => updateInput('text', e.target.value)}
+                className={inputClass}
+                rows={4}
+                placeholder="Your text content here..."
+              />
+            </div>
+          </div>
+        );
+
+      case 'json-to-excel':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Sheet Name</label>
+              <input
+                type="text"
+                value={toolInputs.sheetName || ''}
+                onChange={(e) => updateInput('sheetName', e.target.value)}
+                className={inputClass}
+                placeholder="Sheet1"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>JSON Data (Array)</label>
+              <textarea
+                value={toolInputs.data || ''}
+                onChange={(e) => updateInput('data', e.target.value)}
+                className={inputClass}
+                rows={4}
+                placeholder='[{"name": "Item", "value": 100}]'
+              />
+            </div>
+          </div>
+        );
+
+      case 'generate-receipt':
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>Receipt #</label>
+                <input
+                  type="text"
+                  value={toolInputs.receiptNumber || ''}
+                  onChange={(e) => updateInput('receiptNumber', e.target.value)}
+                  className={inputClass}
+                  placeholder="RCP-001"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Date</label>
+                <input
+                  type="date"
+                  value={toolInputs.date || ''}
+                  onChange={(e) => updateInput('date', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>From Name</label>
+                <input
+                  type="text"
+                  value={toolInputs.fromName || ''}
+                  onChange={(e) => updateInput('fromName', e.target.value)}
+                  className={inputClass}
+                  placeholder="Your Company"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>From Email</label>
+                <input
+                  type="email"
+                  value={toolInputs.fromEmail || ''}
+                  onChange={(e) => updateInput('fromEmail', e.target.value)}
+                  className={inputClass}
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>To Name</label>
+                <input
+                  type="text"
+                  value={toolInputs.toName || ''}
+                  onChange={(e) => updateInput('toName', e.target.value)}
+                  className={inputClass}
+                  placeholder="Customer Name"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>To Email</label>
+                <input
+                  type="email"
+                  value={toolInputs.toEmail || ''}
+                  onChange={(e) => updateInput('toEmail', e.target.value)}
+                  className={inputClass}
+                  placeholder="customer@example.com"
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Items (JSON Array)</label>
+              <textarea
+                value={toolInputs.items || ''}
+                onChange={(e) => updateInput('items', e.target.value)}
+                className={inputClass}
+                rows={2}
+                placeholder='[{"description": "Item", "quantity": 1, "price": 50}]'
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Total Amount</label>
+              <input
+                type="number"
+                value={toolInputs.total || ''}
+                onChange={(e) => updateInput('total', e.target.value)}
+                className={inputClass}
+                placeholder="50.00"
+                step="0.01"
+              />
+            </div>
+          </div>
+        );
+
+      case 'generate-invoice':
+        return (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>Invoice #</label>
+                <input
+                  type="text"
+                  value={toolInputs.invoiceNumber || ''}
+                  onChange={(e) => updateInput('invoiceNumber', e.target.value)}
+                  className={inputClass}
+                  placeholder="INV-001"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Date</label>
+                <input
+                  type="date"
+                  value={toolInputs.date || ''}
+                  onChange={(e) => updateInput('date', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>From Name</label>
+                <input
+                  type="text"
+                  value={toolInputs.fromName || ''}
+                  onChange={(e) => updateInput('fromName', e.target.value)}
+                  className={inputClass}
+                  placeholder="Your Company"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>From Email</label>
+                <input
+                  type="email"
+                  value={toolInputs.fromEmail || ''}
+                  onChange={(e) => updateInput('fromEmail', e.target.value)}
+                  className={inputClass}
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>From Address</label>
+              <input
+                type="text"
+                value={toolInputs.fromAddress || ''}
+                onChange={(e) => updateInput('fromAddress', e.target.value)}
+                className={inputClass}
+                placeholder="123 Business St"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelClass}>To Name</label>
+                <input
+                  type="text"
+                  value={toolInputs.toName || ''}
+                  onChange={(e) => updateInput('toName', e.target.value)}
+                  className={inputClass}
+                  placeholder="Client Name"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>To Email</label>
+                <input
+                  type="email"
+                  value={toolInputs.toEmail || ''}
+                  onChange={(e) => updateInput('toEmail', e.target.value)}
+                  className={inputClass}
+                  placeholder="client@example.com"
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>To Address</label>
+              <input
+                type="text"
+                value={toolInputs.toAddress || ''}
+                onChange={(e) => updateInput('toAddress', e.target.value)}
+                className={inputClass}
+                placeholder="456 Client Ave"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Items (JSON Array)</label>
+              <textarea
+                value={toolInputs.items || ''}
+                onChange={(e) => updateInput('items', e.target.value)}
+                className={inputClass}
+                rows={2}
+                placeholder='[{"description": "Service", "quantity": 1, "unitPrice": 100, "total": 100}]'
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Currency</label>
+              <input
+                type="text"
+                value={toolInputs.currency || ''}
+                onChange={(e) => updateInput('currency', e.target.value)}
+                className={inputClass}
+                placeholder="USD"
+              />
+            </div>
+          </div>
+        );
+
+      case 'ocr-extract-text':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Image URL</label>
+              <input
+                type="text"
+                value={toolInputs.imageUrl || ''}
+                onChange={(e) => updateInput('imageUrl', e.target.value)}
+                className={inputClass}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Language Code</label>
+              <input
+                type="text"
+                value={toolInputs.language || ''}
+                onChange={(e) => updateInput('language', e.target.value)}
+                className={inputClass}
+                placeholder="eng"
+              />
+            </div>
+          </div>
+        );
+
+      case 'generate-qrcode':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Data / URL</label>
+              <input
+                type="text"
+                value={toolInputs.data || ''}
+                onChange={(e) => updateInput('data', e.target.value)}
+                className={inputClass}
+                placeholder="https://zebridge.vercel.app"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Size (px)</label>
+              <input
+                type="number"
+                value={toolInputs.size || ''}
+                onChange={(e) => updateInput('size', e.target.value)}
+                className={inputClass}
+                placeholder="256"
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
@@ -308,14 +863,10 @@ export default function ToolsTab() {
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">{selectedTool.desc}</p>
               </div>
 
-              {/* Upload input preview */}
-              <div className="bg-slate-950/60 rounded-xl p-4 border border-white/5 space-y-3">
-                <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Input File Assets</span>
-                <div className="border border-dashed border-white/10 rounded-lg p-4 text-center hover:bg-slate-900/20 transition-colors cursor-pointer relative">
-                  <Upload className="h-5 w-5 text-slate-500 mx-auto mb-2" />
-                  <span className="text-xs text-slate-300 font-medium block">{mockFileName}</span>
-                  <span className="text-[10px] text-slate-500 mt-0.5 block">Drag file or click to change</span>
-                </div>
+              {/* Input Fields */}
+              <div className="bg-slate-950/60 rounded-xl p-4 border border-white/5 space-y-3 max-h-96 overflow-y-auto">
+                <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Tool Parameters</span>
+                {renderInputFields()}
               </div>
 
               {/* Console logs output */}

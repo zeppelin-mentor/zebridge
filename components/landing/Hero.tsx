@@ -5,6 +5,10 @@ import Link from "next/link";
 import { ShieldCheck, ArrowRight, Play } from "lucide-react";
 
 export default function Hero() {
+  const mcpUrl = process.env.NEXT_PUBLIC_APP_URL 
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/mcp`
+    : 'https://zebridge.vercel.app/mcp';
+  
   return (
     <section className="relative overflow-hidden pt-16 pb-12 md:pt-28 md:pb-20">
       {/* Background glow effects */}
@@ -60,9 +64,9 @@ export default function Hero() {
             <div className="max-w-md rounded-xl border border-white/5 bg-slate-950/80 px-4 py-3 backdrop-blur-md">
               <code className="text-xs md:text-sm text-slate-300 flex items-center justify-between gap-3">
                 <span className="text-slate-400 font-mono">MCP Endpoint:</span>
-                <span className="text-emerald-400 font-mono">https://zebridge.io/mcp</span>
+                <span className="text-emerald-400 font-mono">{mcpUrl}</span>
                 <button 
-                  onClick={() => navigator.clipboard.writeText("https://zebridge.io/mcp")}
+                  onClick={() => navigator.clipboard.writeText(mcpUrl)}
                   className="text-xs text-slate-500 hover:text-white transition-colors"
                   title="Copy to clipboard"
                 >
