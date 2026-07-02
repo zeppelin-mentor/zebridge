@@ -33,7 +33,7 @@ export default function Header() {
             <Link href="#pricing" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
               Pricing
             </Link>
-            <Link href="https://zeppelinlabs.com" target="_blank" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
+            <Link href="https://zeppelinlabs.digital" target="_blank" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
               About Zeppelin Labs
             </Link>
           </nav>
@@ -96,7 +96,7 @@ export default function Header() {
               Pricing
             </Link>
             <Link
-              href="https://zeppelinlabs.com"
+              href="https://zeppelinlabs.digital"
               target="_blank"
               onClick={() => setIsOpen(false)}
               className="block rounded-md px-3 py-2 text-base font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
