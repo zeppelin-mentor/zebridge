@@ -1,114 +1,143 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, BookOpen, Trash2, Edit3, Send, CheckCircle2 } from "lucide-react";
+import { Plus, BookOpen, Trash2, Edit3, Send, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface BlogPost {
   id: string;
   title: string;
   slug: string;
   category: string;
-  status: "draft" | "published";
-  createdAt: string;
+  status: "draft" | "published" | "archived";
+  created_at: string;
+  updated_at: string;
+  published_at?: string;
   excerpt: string;
   content: string;
+  author_id: string;
 }
 
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Product");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load from LocalStorage
   useEffect(() => {
-    const savedPosts = localStorage.getItem("zebridge_blog_posts");
-    if (savedPosts) {
-      setPosts(JSON.parse(savedPosts));
-    } else {
-      const defaultPosts: BlogPost[] = [
-        { 
-          id: "p-1", 
-          title: "Announcing ZeBridge 1.0 Release", 
-          slug: "announcing-zebridge-v1", 
-          category: "Product", 
-          status: "published", 
-          createdAt: "2026-06-15", 
-          excerpt: "Secure Model Context Protocol connection client interfaces are now live globally.", 
-          content: "We are thrilled to launch ZeBridge 1.0, connecting AI assistants to real-world operational tools."
-        },
-        { 
-          id: "p-2", 
-          title: "How to configure Claude Code with custom MCP URL", 
-          slug: "configure-claude-mcp-url", 
-          category: "Guides", 
-          status: "published", 
-          createdAt: "2026-06-25", 
-          excerpt: "Step-by-step setup guides to resolve secure SSE tokens inside Claude CLI settings.", 
-          content: "Connecting Claude Code is simple. Just export the token header and specify our SSE URL endpoint."
-        }
-      ];
-      setPosts(defaultPosts);
-      localStorage.setItem("zebridge_blog_posts", JSON.stringify(defaultPosts));
-    }
+    fetchPosts();
   }, []);
 
-  const savePostsList = (newPosts: BlogPost[]) => {
-    setPosts(newPosts);
-    localStorage.setItem("zebridge_blog_posts", JSON.stringify(newPosts));
-  };
+  async function fetchPosts() {
+    setLoading(true);
+    try {
+      const response = await fetch("/v1/admin/blog");
+      if (!response.ok) throw new Error("Failed to fetch posts");
+      
+      const data = await response.json();
+      setPosts(data.posts || []);
+    } catch (error) {
+      console.error("Failed to fetch blog posts:", error);
+      setError("Failed to load blog posts");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const handleSavePost = (e: React.FormEvent, status: "draft" | "published") => {
+  const handleSavePost = async (e: React.FormEvent, status: "draft" | "published") => {
     e.preventDefault();
-    if (!title || !content) return;
-
-    const postSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
-    if (editingPost) {
-      // Modify
-      const updated = posts.map(p => {
-        if (p.id === editingPost.id) {
-          return {
-            ...p,
-            title,
-            slug: postSlug,
-            category,
-            excerpt: excerpt || content.slice(0, 100) + "...",
-            content,
-            status
-          };
-        }
-        return p;
-      });
-      savePostsList(updated);
-      setEditingPost(null);
-    } else {
-      // Create
-      const newPost: BlogPost = {
-        id: Math.random().toString(),
-        title,
-        slug: postSlug,
-        category,
-        status,
-        createdAt: new Date().toISOString().split("T")[0],
-        excerpt: excerpt || content.slice(0, 100) + "...",
-        content
-      };
-      savePostsList([newPost, ...posts]);
+    if (!title || !content) {
+      setError("Title and content are required");
+      return;
     }
 
-    // Reset inputs
-    setTitle("");
-    setExcerpt("");
-    setContent("");
+    setSaving(true);
+    setError(null);
+
+    try {
+      if (editingPost) {
+        // Update existing post
+        const response = await fetch("/v1/admin/blog", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingPost.id,
+            updates: {
+              title,
+              category,
+              excerpt: excerpt || content.slice(0, 150) + "...",
+              content,
+              status,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to update post");
+        }
+
+        const data = await response.json();
+        setPosts(prev => prev.map(p => p.id === data.post.id ? data.post : p));
+        setEditingPost(null);
+      } else {
+        // Create new post
+        const response = await fetch("/v1/admin/blog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            category,
+            excerpt: excerpt || content.slice(0, 150) + "...",
+            content,
+            status,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to create post");
+        }
+
+        const data = await response.json();
+        setPosts(prev => [data.post, ...prev]);
+      }
+
+      // Reset form
+      setTitle("");
+      setExcerpt("");
+      setContent("");
+      setCategory("Product");
+    } catch (error) {
+      console.error("Save post error:", error);
+      setError((error as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDeletePost = (id: string) => {
-    if (confirm("Are you sure you want to delete this blog post? It will immediately disappear from the platform archives.")) {
-      const updated = posts.filter(p => p.id !== id);
-      savePostsList(updated);
+  const handleDeletePost = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this blog post? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/v1/admin/blog?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete post");
+      }
+
+      setPosts(prev => prev.filter(p => p.id !== id));
+    } catch (error) {
+      console.error("Delete post error:", error);
+      setError("Failed to delete post");
     }
   };
 
@@ -118,7 +147,25 @@ export default function AdminBlogPage() {
     setCategory(post.category);
     setExcerpt(post.excerpt);
     setContent(post.content);
+    setError(null);
   };
+
+  const handleCancelEdit = () => {
+    setEditingPost(null);
+    setTitle("");
+    setExcerpt("");
+    setContent("");
+    setCategory("Product");
+    setError(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-slate-400">Loading blog posts...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start font-sans">
@@ -131,18 +178,20 @@ export default function AdminBlogPage() {
           </h3>
           {editingPost && (
             <button 
-              onClick={() => {
-                setEditingPost(null);
-                setTitle("");
-                setExcerpt("");
-                setContent("");
-              }}
+              onClick={handleCancelEdit}
               className="text-xs text-slate-500 hover:text-white"
             >
               Cancel Edit
             </button>
           )}
         </div>
+
+        {error && (
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-center gap-2 text-rose-400 text-xs">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         <form className="space-y-4 text-xs">
           <div className="space-y-1.5">
@@ -152,7 +201,8 @@ export default function AdminBlogPage() {
               placeholder="e.g. ZeBridge Release Announcement v1.2"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-950 border border-violet-500/10 focus:border-violet-400/40 rounded-xl px-4 py-2.5 text-slate-200 placeholder-slate-700 focus:outline-none"
+              disabled={saving}
+              className="w-full bg-slate-950 border border-violet-500/10 focus:border-violet-400/40 rounded-xl px-4 py-2.5 text-slate-200 placeholder-slate-700 focus:outline-none disabled:opacity-50"
             />
           </div>
 
@@ -162,7 +212,8 @@ export default function AdminBlogPage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-950 border border-violet-500/10 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none"
+                disabled={saving}
+                className="w-full bg-slate-950 border border-violet-500/10 rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none disabled:opacity-50"
               >
                 <option value="Product">Product Release</option>
                 <option value="Guides">Tutorials / Guides</option>
@@ -186,34 +237,40 @@ export default function AdminBlogPage() {
               placeholder="Provide a quick 1-sentence abstract..."
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
-              className="w-full bg-slate-950 border border-violet-500/10 focus:border-violet-400/40 rounded-xl px-4 py-2.5 text-slate-200 placeholder-slate-700 focus:outline-none"
+              disabled={saving}
+              className="w-full bg-slate-950 border border-violet-500/10 focus:border-violet-400/40 rounded-xl px-4 py-2.5 text-slate-200 placeholder-slate-700 focus:outline-none disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-300">Post markdown Content</label>
+            <label className="font-semibold text-slate-300">Post Markdown Content</label>
             <textarea
               rows={8}
-              placeholder="Write raw markdown code details here..."
+              placeholder="Write markdown content here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-slate-950 border border-violet-500/10 focus:border-violet-400/40 rounded-xl px-4 py-2.5 text-slate-200 placeholder-slate-700 focus:outline-none font-mono leading-relaxed"
+              disabled={saving}
+              className="w-full bg-slate-950 border border-violet-500/10 focus:border-violet-400/40 rounded-xl px-4 py-2.5 text-slate-200 placeholder-slate-700 focus:outline-none font-mono leading-relaxed disabled:opacity-50"
             />
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-3">
             <button
+              type="button"
               onClick={(e) => handleSavePost(e, "draft")}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-violet-500/15 bg-violet-950/20 hover:bg-violet-950/40 px-4 py-2.5 text-xs font-bold text-violet-300 transition-colors"
+              disabled={saving || !title || !content}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-violet-500/15 bg-violet-950/20 hover:bg-violet-950/40 px-4 py-2.5 text-xs font-bold text-violet-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Draft
+              {saving ? "Saving..." : "Save Draft"}
             </button>
             <button
+              type="button"
               onClick={(e) => handleSavePost(e, "published")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-100 px-5 py-2.5 text-xs font-bold text-slate-950 transition-colors"
+              disabled={saving || !title || !content}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-slate-100 px-5 py-2.5 text-xs font-bold text-slate-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="h-3.5 w-3.5" />
-              Publish Post
+              {saving ? "Publishing..." : "Publish Post"}
             </button>
           </div>
         </form>
@@ -222,7 +279,7 @@ export default function AdminBlogPage() {
       {/* Right side: Current Archives list */}
       <div className="lg:col-span-5 bg-[#120B27]/40 border border-violet-500/10 rounded-2xl p-6 backdrop-blur-md space-y-4">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider pb-2 border-b border-violet-500/10">
-          Published Articles
+          Published Articles ({posts.length})
         </h3>
 
         {posts.length > 0 ? (
@@ -238,10 +295,12 @@ export default function AdminBlogPage() {
                     <h4 className="text-xs font-bold text-white mt-1 group-hover:text-violet-300 transition-colors">{post.title}</h4>
                   </div>
                   
-                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded shrink-0 ${
+                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
                     post.status === "published" 
                       ? "bg-emerald-500/10 text-emerald-400" 
-                      : "bg-slate-800 text-slate-400"
+                      : post.status === "archived"
+                      ? "bg-slate-800 text-slate-500"
+                      : "bg-amber-500/10 text-amber-400"
                   }`}>
                     {post.status}
                   </span>
@@ -250,7 +309,7 @@ export default function AdminBlogPage() {
                 <p className="text-[11px] text-slate-500 leading-normal line-clamp-2">{post.excerpt}</p>
                 
                 <div className="pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-slate-500">
-                  <span>{post.createdAt}</span>
+                  <span>{new Date(post.created_at).toLocaleDateString()}</span>
                   
                   <div className="flex items-center gap-1">
                     <button 
@@ -274,7 +333,7 @@ export default function AdminBlogPage() {
           </div>
         ) : (
           <div className="text-center py-12 text-slate-500 text-xs">
-            No posts compiled. Comprise one on the left.
+            No posts created yet. Write one on the left.
           </div>
         )}
       </div>
