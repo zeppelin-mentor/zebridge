@@ -14,6 +14,7 @@ import {
   Terminal as TermIcon,
   RefreshCw
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface ToolItem {
   name: string;
@@ -35,6 +36,7 @@ export default function ToolsTab() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [mockFileName, setMockFileName] = useState("sample_avatar.png");
   const [isFinished, setIsFinished] = useState(false);
+  const [outputFileUrl, setOutputFileUrl] = useState<string | null>(null);
 
   const toolsList: ToolItem[] = [
     // PDF
@@ -72,6 +74,7 @@ export default function ToolsTab() {
     setIsFinished(false);
     setProgress(0);
     setLogs([]);
+    setOutputFileUrl(null);
     if (tool.category === "PDF") {
       setMockFileName("annual_report_draft.pdf");
     } else if (tool.category === "Images") {
@@ -81,49 +84,149 @@ export default function ToolsTab() {
     }
   };
 
-  const executeSandboxTool = () => {
-    if (isExecuting) return;
+  const executeSandboxTool = async () => {
+    if (isExecuting || !selectedTool) return;
     setIsExecuting(true);
     setIsFinished(false);
     setProgress(0);
-    setLogs(["[DISPATCH] Queueing task in region: US-East-1 (AWS)..."]);
+    setLogs([`[SANDBOX] Starting test execution for: ${selectedTool.slug}`]);
 
-    const executionLogs = [
-      "[WORKER] Spawned container runtime instance: node-19-alpine-slim",
-      "[SANDBOX] Locked input file descriptors: /tmp/uploads/" + mockFileName,
-      `[PROCESS] Resolving execution arguments for module: [${selectedTool?.slug}]`,
-      "[NEURAL] Launching execution pipeline... (CUDA drivers allocated)",
-      "[NEURAL] Scanning input buffers & layouts...",
-      "[NEURAL] Optimizing transparency levels (alpha layer mapping)",
-      "[WORKER] Generating result asset buffer...",
-      "[STORAGE] Uploading output files to bucket: supabase/outputs/",
-      "[DISPATCH] Job completed successfully! Output file hash: sha256_9c228fb"
-    ];
+    try {
+      // Get API key from database
+      setLogs(prev => [...prev, "[AUTH] Fetching API key..."]);
+      const { data: { user } } = await createClient().auth.getUser();
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
 
-    let currentLogIdx = 0;
-    
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setLogs(prevLogs => [...prevLogs, "[DISPATCH] Releasing worker process thread. OK."]);
-          setTimeout(() => {
-            setIsExecuting(false);
-            setIsFinished(true);
-          }, 400);
-          return 100;
-        }
+      const { data: keys } = await createClient()
+        .from('api_keys')
+        .select('key')
+        .eq('user_id', user.id)
+        .is('revoked_at', null)
+        .limit(1);
 
-        // Inject log statement at milestones
-        const checkLog = Math.floor(prev / 11);
-        if (checkLog > currentLogIdx && currentLogIdx < executionLogs.length) {
-          setLogs(prevLogs => [...prevLogs, executionLogs[currentLogIdx]]);
-          currentLogIdx++;
-        }
+      if (!keys || keys.length === 0) {
+        throw new Error("No API key found. Please create one first.");
+      }
 
-        return prev + 5;
+      const apiKey = keys[0].key;
+      setLogs(prev => [...prev, "[AUTH] API key validated ✓"]);
+      setProgress(20);
+
+      // Prepare test data based on tool
+      setLogs(prev => [...prev, `[PREPARE] Building test payload for ${selectedTool.slug}...`]);
+      const testData = getTestDataForTool(selectedTool.slug);
+      setProgress(40);
+
+      // Call the actual API endpoint
+      setLogs(prev => [...prev, `[REQUEST] POST /v1/tools/${selectedTool.slug}`]);
+      const startTime = Date.now();
+      
+      const response = await fetch(`/v1/tools/${selectedTool.slug}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(testData)
       });
-    }, 120);
+
+      const duration = Date.now() - startTime;
+      setProgress(80);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      setLogs(prev => [...prev, `[RESPONSE] Status: ${response.status} OK (${duration}ms)`]);
+      setLogs(prev => [...prev, `[SUCCESS] Tool executed successfully!`]);
+      
+      if (result.fileUrl) {
+        setLogs(prev => [...prev, `[OUTPUT] File available at: ${result.fileUrl}`]);
+        setOutputFileUrl(result.fileUrl);
+      }
+
+      setProgress(100);
+      setIsFinished(true);
+      setIsExecuting(false);
+
+    } catch (error) {
+      setLogs(prev => [...prev, `[ERROR] ${error instanceof Error ? error.message : 'Unknown error'}`]);
+      setProgress(0);
+      setIsExecuting(false);
+    }
+  };
+
+  const getTestDataForTool = (slug: string): any => {
+    const testDataMap: Record<string, any> = {
+      'pdf-merge': {
+        pdfUrls: ['https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf']
+      },
+      'pdf-split': {
+        pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        ranges: [[1, 1]]
+      },
+      'markdown-to-pdf': {
+        markdown: '# Test Document\n\nThis is a **sandbox test** of the markdown-to-pdf tool.\n\n- Item 1\n- Item 2',
+        title: 'Sandbox Test'
+      },
+      'html-to-pdf': {
+        html: '<html><body><h1>Sandbox Test</h1><p>This is a test HTML document.</p></body></html>',
+        title: 'Sandbox Test'
+      },
+      'remove-background': {
+        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+        outputFormat: 'png'
+      },
+      'image-upscale': {
+        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
+        scaleFactor: '2x'
+      },
+      'text-to-docx': {
+        text: 'This is a sandbox test of the text-to-docx tool.\n\nIt converts plain text into formatted Word documents.',
+        title: 'Sandbox Test'
+      },
+      'json-to-excel': {
+        data: [
+          { id: 1, name: 'Test Item', value: 100 },
+          { id: 2, name: 'Another Item', value: 200 }
+        ],
+        sheetName: 'Sandbox Test'
+      },
+      'generate-receipt': {
+        receiptNumber: 'SANDBOX-001',
+        date: new Date().toISOString().split('T')[0],
+        items: [
+          { description: 'Test Item', quantity: 1, price: 50 }
+        ],
+        total: 50,
+        from: { name: 'ZeBridge', email: 'test@zebridge.com' },
+        to: { name: 'Sandbox User', email: 'user@example.com' }
+      },
+      'generate-invoice': {
+        invoiceNumber: 'SANDBOX-001',
+        date: new Date().toISOString().split('T')[0],
+        from: { name: 'ZeBridge', address: '123 Test St', email: 'test@zebridge.com' },
+        to: { name: 'Sandbox User', address: '456 User Ave', email: 'user@example.com' },
+        items: [
+          { description: 'Test Service', quantity: 1, unitPrice: 100, total: 100 }
+        ],
+        currency: 'USD'
+      },
+      'ocr-extract-text': {
+        imageUrl: 'https://images.unsplash.com/photo-1568667256549-094345857637?w=400',
+        language: 'eng'
+      },
+      'generate-qrcode': {
+        data: 'https://zebridge.com',
+        size: 256
+      }
+    };
+
+    return testDataMap[slug] || {};
   };
 
   return (
@@ -278,11 +381,18 @@ export default function ToolsTab() {
                   )}
 
                   <button
-                    onClick={() => alert(`Success: Saved output_${mockFileName} to your desktop downloads folder.`)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-500 text-xs font-bold text-slate-950 py-2 transition-colors"
+                    onClick={() => {
+                      if (outputFileUrl) {
+                        window.open(outputFileUrl, '_blank');
+                      } else {
+                        alert('No output file URL available');
+                      }
+                    }}
+                    disabled={!outputFileUrl}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-500 text-xs font-bold text-slate-950 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    Download Output File
+                    {outputFileUrl ? 'Download Output File' : 'No Output Available'}
                   </button>
                 </div>
               )}
