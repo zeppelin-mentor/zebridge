@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Activity, Users, Database, ShieldAlert, Cpu, BarChart3 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Activity, Users, Database, ShieldAlert, Cpu, BarChart3, AlertTriangle } from "lucide-react";
 
 interface PlatformStats {
   totalUsers: number;
@@ -11,6 +10,14 @@ interface PlatformStats {
   activeApiKeys: number;
   todayExecutions: number;
   totalStorage: number;
+  totalBlogPosts: number;
+}
+
+interface ErrorLog {
+  id: string;
+  tool_slug: string;
+  error: string;
+  created_at: string;
 }
 
 export default function AdminOverviewPage() {
@@ -21,53 +28,22 @@ export default function AdminOverviewPage() {
     activeApiKeys: 0,
     todayExecutions: 0,
     totalStorage: 0,
+    totalBlogPosts: 0,
   });
+  const [executionHistory, setExecutionHistory] = useState<Record<string, number>>({});
+  const [recentErrors, setRecentErrors] = useState<ErrorLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
-      const supabase = createClient();
-
       try {
-        // Fetch user count
-        const { count: userCount } = await supabase
-          .from("users")
-          .select("*", { count: "exact", head: true });
-
-        // Fetch execution count
-        const { count: execCount } = await supabase
-          .from("executions")
-          .select("*", { count: "exact", head: true });
-
-        // Fetch today's execution count
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const { count: todayCount } = await supabase
-          .from("executions")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", today.toISOString());
-
-        // Fetch file count and storage
-        const { count: fileCount, data: files } = await supabase
-          .from("files")
-          .select("size", { count: "exact" });
-
-        const totalStorage = files?.reduce((sum, file) => sum + (file.size || 0), 0) || 0;
-
-        // Fetch active API keys count
-        const { count: apiKeyCount } = await supabase
-          .from("api_keys")
-          .select("*", { count: "exact", head: true })
-          .is("revoked_at", null);
-
-        setStats({
-          totalUsers: userCount || 0,
-          totalExecutions: execCount || 0,
-          totalFiles: fileCount || 0,
-          activeApiKeys: apiKeyCount || 0,
-          todayExecutions: todayCount || 0,
-          totalStorage: totalStorage,
-        });
+        const response = await fetch("/v1/admin/stats");
+        if (!response.ok) throw new Error("Failed to fetch stats");
+        
+        const data = await response.json();
+        setStats(data.stats);
+        setExecutionHistory(data.executionHistory || {});
+        setRecentErrors(data.recentErrors || []);
       } catch (error) {
         console.error("Failed to fetch admin stats:", error);
       } finally {
@@ -91,33 +67,83 @@ export default function AdminOverviewPage() {
       title: "Registered Users", 
       value: loading ? "..." : stats.totalUsers.toLocaleString(), 
       change: "Active accounts", 
-      detail: `${stats.activeApiKeys} API keys`, 
+      detail: `${loading ? "..." : stats.activeApiKeys} API keys`, 
       icon: Users, 
       color: "text-indigo-400" 
     },
     { 
       title: "Storage Used", 
       value: loading ? "..." : `${(stats.totalStorage / (1024 * 1024)).toFixed(1)} MB`, 
-      change: `${stats.totalFiles} files`, 
+      change: `${loading ? "..." : stats.totalFiles} files`, 
       detail: "Across all buckets", 
       icon: Cpu, 
       color: "text-violet-400" 
     },
     { 
-      title: "Database Status", 
-      value: "Healthy", 
-      change: "Supabase PostgreSQL", 
-      detail: "All systems operational", 
+      title: "Blog Posts", 
+      value: loading ? "..." : stats.totalBlogPosts.toString(), 
+      change: "Published articles", 
+      detail: "Content management", 
       icon: Database, 
       color: "text-indigo-400" 
     }
   ];
 
-  const alerts = [
-    { id: "AL-804", type: "warning", message: "Rate limit threshold breached by workspace 'CursorIDE_Demo_Org'", time: "4 min ago" },
-    { id: "AL-803", type: "error", message: "Supabase outputs storage bucket near 90% soft quota warning", time: "18 min ago" },
-    { id: "AL-802", type: "info", message: "Standard queue workers auto-scaled from 4 to 8 instances", time: "1 hr ago" }
-  ];
+  // Generate last 7 days for graph
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    return date;
+  });
+
+  const graphDates = last7Days.map(d => d.toISOString().split('T')[0]);
+  const graphLabels = last7Days.map(d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  const graphData = graphDates.map(date => executionHistory[date] || 0);
+  
+  // Calculate max for scaling
+  const maxExecutions = Math.max(...graphData, 1);
+  
+  // Generate SVG path for the graph
+  const pathPoints = graphData.map((count, i) => {
+    const x = (i / (graphData.length - 1)) * 600;
+    const y = 150 - ((count / maxExecutions) * 120);
+    return { x, y };
+  });
+
+  const pathD = pathPoints.length > 0
+    ? `M ${pathPoints.map((p, i) => `${p.x} ${p.y}`).join(' L ')}`
+    : "M 0 150 L 600 150";
+
+  const fillPathD = pathPoints.length > 0
+    ? `${pathD} L 600 150 L 0 150 Z`
+    : "M 0 150 L 600 150 Z";
+
+  // Format recent errors as alerts
+  const alerts = recentErrors.slice(0, 3).map((err, idx) => {
+    const timeAgo = getTimeAgo(err.created_at);
+    return {
+      id: err.id.slice(0, 8),
+      type: "error" as const,
+      message: `Tool "${err.tool_slug}" failed: ${err.error?.slice(0, 80) || 'Unknown error'}`,
+      time: timeAgo,
+    };
+  });
+
+  function getTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins} min ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  }
 
   return (
     <div className="space-y-6">
@@ -156,44 +182,49 @@ export default function AdminOverviewPage() {
           </h3>
 
           <div className="h-48 w-full relative">
-            <svg className="w-full h-full" viewBox="0 0 600 150" fill="none" preserveAspectRatio="none">
-              <line x1="0" y1="30" x2="600" y2="30" stroke="#ffffff" strokeOpacity="0.02" strokeDasharray="4 4" />
-              <line x1="0" y1="75" x2="600" y2="75" stroke="#ffffff" strokeOpacity="0.02" strokeDasharray="4 4" />
-              <line x1="0" y1="120" x2="600" y2="120" stroke="#ffffff" strokeOpacity="0.02" strokeDasharray="4 4" />
+            {loading ? (
+              <div className="flex items-center justify-center h-full text-slate-500 text-xs">
+                Loading execution history...
+              </div>
+            ) : (
+              <>
+                <svg className="w-full h-full" viewBox="0 0 600 150" fill="none" preserveAspectRatio="none">
+                  <line x1="0" y1="30" x2="600" y2="30" stroke="#ffffff" strokeOpacity="0.02" strokeDasharray="4 4" />
+                  <line x1="0" y1="75" x2="600" y2="75" stroke="#ffffff" strokeOpacity="0.02" strokeDasharray="4 4" />
+                  <line x1="0" y1="120" x2="600" y2="120" stroke="#ffffff" strokeOpacity="0.02" strokeDasharray="4 4" />
 
-              {/* Fill */}
-              <path
-                d="M 0 135 C 100 115, 150 90, 200 60 C 250 80, 300 45, 400 30 C 500 45, 550 15, 600 5 L 600 150 L 0 150 Z"
-                fill="url(#admin-chart-grad)"
-              />
-              {/* Path */}
-              <path
-                d="M 0 135 C 100 115, 150 90, 200 60 C 250 80, 300 45, 400 30 C 500 45, 550 15, 600 5"
-                stroke="url(#admin-line-grad)"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
+                  {/* Fill */}
+                  <path
+                    d={fillPathD}
+                    fill="url(#admin-chart-grad)"
+                  />
+                  {/* Path */}
+                  <path
+                    d={pathD}
+                    stroke="url(#admin-line-grad)"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                  />
 
-              <defs>
-                <linearGradient id="admin-chart-grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop stopColor="#8B5CF6" stopOpacity="0.15" />
-                  <stop offset="1" stopColor="#8B5CF6" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="admin-line-grad" x1="0" y1="0" x2="1" y2="0">
-                  <stop stopColor="#6366F1" />
-                  <stop offset="0.5" stopColor="#A78BFA" />
-                  <stop offset="1" stopColor="#F472B6" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute inset-x-0 bottom-0 flex justify-between px-1 text-[9px] font-mono text-slate-500">
-              <span>May 25</span>
-              <span>June 01</span>
-              <span>June 08</span>
-              <span>June 15</span>
-              <span>June 22</span>
-              <span>June 29</span>
-            </div>
+                  <defs>
+                    <linearGradient id="admin-chart-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop stopColor="#8B5CF6" stopOpacity="0.15" />
+                      <stop offset="1" stopColor="#8B5CF6" stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id="admin-line-grad" x1="0" y1="0" x2="1" y2="0">
+                      <stop stopColor="#6366F1" />
+                      <stop offset="0.5" stopColor="#A78BFA" />
+                      <stop offset="1" stopColor="#F472B6" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div className="absolute inset-x-0 bottom-0 flex justify-between px-1 text-[9px] font-mono text-slate-500">
+                  {graphLabels.map((label, i) => (
+                    <span key={i}>{label}</span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -202,30 +233,44 @@ export default function AdminOverviewPage() {
           <div>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
               <ShieldAlert className="h-4 w-4 text-rose-500 animate-pulse" />
-              Platform Severity Log
+              Recent Errors
             </h3>
-            <div className="space-y-3">
-              {alerts.map((alert) => (
-                <div key={alert.id} className="bg-slate-950/40 rounded-xl p-3 border border-white/5 space-y-1">
-                  <div className="flex justify-between items-center text-[10px] font-mono">
-                    <span className={`font-bold ${
-                      alert.type === "error" ? "text-rose-400" : alert.type === "warning" ? "text-amber-400" : "text-sky-400"
-                    }`}>
-                      [{alert.id}] {alert.type.toUpperCase()}
-                    </span>
-                    <span className="text-slate-600">{alert.time}</span>
+            {loading ? (
+              <div className="text-center py-8 text-slate-500 text-xs">
+                Loading errors...
+              </div>
+            ) : alerts.length > 0 ? (
+              <div className="space-y-3">
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="bg-slate-950/40 rounded-xl p-3 border border-white/5 space-y-1">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className={`font-bold ${
+                        alert.type === "error" ? "text-rose-400" : alert.type === "warning" ? "text-amber-400" : "text-sky-400"
+                      }`}>
+                        [{alert.id}] {alert.type.toUpperCase()}
+                      </span>
+                      <span className="text-slate-600">{alert.time}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-normal">{alert.message}</p>
                   </div>
-                  <p className="text-xs text-slate-300 leading-normal">{alert.message}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-emerald-400 text-xs flex flex-col items-center gap-2">
+                <ShieldAlert className="h-6 w-6" />
+                <p>No recent errors found</p>
+                <p className="text-slate-500">All systems operational</p>
+              </div>
+            )}
           </div>
-          <button 
-            onClick={() => alert("Success: Cleared system logs cache.")}
-            className="w-full text-center py-2 text-[10px] font-bold text-violet-400 bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/10 rounded-xl mt-4 transition-colors"
-          >
-            Acknowledge & Clear Logs
-          </button>
+          {!loading && alerts.length > 0 && (
+            <button 
+              onClick={() => window.location.href = "/admin/logs"}
+              className="w-full text-center py-2 text-[10px] font-bold text-violet-400 bg-violet-500/5 hover:bg-violet-500/10 border border-violet-500/10 rounded-xl mt-4 transition-colors"
+            >
+              View All Logs
+            </button>
+          )}
         </div>
 
       </div>
