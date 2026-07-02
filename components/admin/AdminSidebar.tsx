@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Logo from "../logo";
 import { 
   BarChart3, 
@@ -12,10 +12,34 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [adminUser, setAdminUser] = useState<{ email: string; role: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchAdminUser() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        setAdminUser({
+          email: user.email || "admin@zebridge.app",
+          role: userData?.role || "user",
+        });
+      }
+    }
+
+    fetchAdminUser();
+  }, []);
 
   const menuItems = [
     { id: "overview", label: "Admin Analytics", href: "/admin", icon: BarChart3 },
@@ -23,9 +47,10 @@ export default function AdminSidebar() {
     { id: "blog", label: "Blog Manager", href: "/admin/blog", icon: BookOpen },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem("zebridge_admin_user");
-    router.push("/auth?mode=signin");
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
   };
 
   return (
@@ -85,14 +110,16 @@ export default function AdminSidebar() {
       {/* User Footer Profile */}
       <div className="pt-4 border-t border-violet-500/10 space-y-3">
         <div className="flex items-center gap-3 px-2">
-          <div className="h-10 w-10 rounded-full overflow-hidden border border-violet-500/10">
-            <img src="/developer_avatar.png" alt="Admin Profile" className="h-full w-full object-cover" />
+          <div className="h-10 w-10 rounded-full overflow-hidden border border-violet-500/10 bg-violet-500/10 flex items-center justify-center">
+            <span className="text-violet-400 font-bold text-sm">
+              {adminUser?.email?.charAt(0).toUpperCase() || "A"}
+            </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-200 truncate">System Admin</p>
-            <p className="text-[10px] text-slate-500 truncate">admin@zeppelinlabs.com</p>
-            <span className="inline-block mt-0.5 text-[9px] bg-violet-500/20 text-violet-400 px-1.5 py-0.2 rounded font-bold font-mono uppercase">
-              Root Level
+            <p className="text-xs font-semibold text-slate-200 truncate">Admin User</p>
+            <p className="text-[10px] text-slate-500 truncate">{adminUser?.email || "Loading..."}</p>
+            <span className="inline-block mt-0.5 text-[9px] bg-rose-500/20 text-rose-400 px-1.5 py-0.2 rounded font-bold font-mono uppercase">
+              {adminUser?.role === "admin" ? "Admin" : "User"}
             </span>
           </div>
         </div>

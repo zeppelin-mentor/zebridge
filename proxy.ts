@@ -26,7 +26,32 @@ export default async function proxy(request: NextRequest) {
   )
 
   // Refresh session if expired
-  await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Protect admin routes
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login?message=Please sign in to access admin', request.url))
+    }
+
+    // Check if user is admin
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData || userData.role !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard?message=Unauthorized: Admin access required', request.url))
+    }
+  }
+
+  // Protect dashboard routes (require authentication)
+  if (request.nextUrl.pathname.startsWith('/dashboard')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login?message=Please sign in to continue', request.url))
+    }
+  }
 
   return response
 }

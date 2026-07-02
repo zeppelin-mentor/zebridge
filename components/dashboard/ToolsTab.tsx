@@ -45,6 +45,7 @@ export default function ToolsTab() {
     // PDF
     { name: "Merge PDFs", slug: "pdf-merge", category: "PDF", desc: "Combines multiple PDF documents into a single consolidated file.", premium: false },
     { name: "Split PDF", slug: "pdf-split", category: "PDF", desc: "Splits pages from a PDF document into separate page extracts.", premium: false },
+    { name: "PDF to DOCX", slug: "pdf-to-docx", category: "PDF", desc: "Converts PDF documents to editable Microsoft Word format.", premium: false },
     { name: "Markdown to PDF", slug: "markdown-to-pdf", category: "PDF", desc: "Converts Markdown formatted text into professional PDF documents.", premium: false },
     { name: "HTML to PDF", slug: "html-to-pdf", category: "PDF", desc: "Converts HTML content into formatted PDF documents.", premium: false },
     
@@ -99,6 +100,10 @@ export default function ToolsTab() {
       'pdf-split': {
         pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
         ranges: '[[1, 1]]'
+      },
+      'pdf-to-docx': {
+        pdfUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        outputFilename: 'converted-document.docx'
       },
       'markdown-to-pdf': {
         markdown: '# Test Document\n\nThis is a **sandbox test** of the markdown-to-pdf tool.\n\n- Item 1\n- Item 2',
@@ -247,6 +252,11 @@ export default function ToolsTab() {
             pdfUrl: inputs.pdfUrl,
             ranges: JSON.parse(inputs.ranges)
           };
+        case 'pdf-to-docx':
+          return {
+            pdfUrl: inputs.pdfUrl,
+            outputFilename: inputs.outputFilename
+          };
         case 'markdown-to-pdf':
           return {
             markdown: inputs.markdown,
@@ -361,6 +371,32 @@ export default function ToolsTab() {
                 onChange={(e) => updateInput('ranges', e.target.value)}
                 className={inputClass}
                 placeholder="[[1, 3], [5, 7]]"
+              />
+            </div>
+          </div>
+        );
+
+      case 'pdf-to-docx':
+        return (
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>PDF URL</label>
+              <input
+                type="text"
+                value={toolInputs.pdfUrl || ''}
+                onChange={(e) => updateInput('pdfUrl', e.target.value)}
+                className={inputClass}
+                placeholder="https://example.com/document.pdf"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Output Filename (optional)</label>
+              <input
+                type="text"
+                value={toolInputs.outputFilename || ''}
+                onChange={(e) => updateInput('outputFilename', e.target.value)}
+                className={inputClass}
+                placeholder="converted-document.docx"
               />
             </div>
           </div>

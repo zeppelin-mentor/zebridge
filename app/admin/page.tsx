@@ -1,14 +1,116 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Activity, Users, Database, ShieldAlert, Cpu, BarChart3 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+interface PlatformStats {
+  totalUsers: number;
+  totalExecutions: number;
+  totalFiles: number;
+  activeApiKeys: number;
+  todayExecutions: number;
+  totalStorage: number;
+}
 
 export default function AdminOverviewPage() {
-  const stats = [
-    { title: "Global Operations", value: "249,081", change: "▲ 18.5% weekly", detail: "Active workers: 84/100", icon: BarChart3, color: "text-violet-400" },
-    { title: "Active Developers", value: "12,904", change: "+42 signups today", detail: "Pro plans: 4,120", icon: Users, color: "text-indigo-400" },
-    { title: "Worker Node Load", value: "48.2%", change: "Region: US-East-1 AWS", detail: "Buffer latency: 4.8ms", icon: Cpu, color: "text-violet-400" },
-    { title: "Database Records", value: "1.4M rows", change: "Supabase PG status: Healthy", detail: "Outflow size: 48 GB", icon: Database, color: "text-indigo-400" }
+  const [stats, setStats] = useState<PlatformStats>({
+    totalUsers: 0,
+    totalExecutions: 0,
+    totalFiles: 0,
+    activeApiKeys: 0,
+    todayExecutions: 0,
+    totalStorage: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      const supabase = createClient();
+
+      try {
+        // Fetch user count
+        const { count: userCount } = await supabase
+          .from("users")
+          .select("*", { count: "exact", head: true });
+
+        // Fetch execution count
+        const { count: execCount } = await supabase
+          .from("executions")
+          .select("*", { count: "exact", head: true });
+
+        // Fetch today's execution count
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const { count: todayCount } = await supabase
+          .from("executions")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", today.toISOString());
+
+        // Fetch file count and storage
+        const { count: fileCount, data: files } = await supabase
+          .from("files")
+          .select("size", { count: "exact" });
+
+        const totalStorage = files?.reduce((sum, file) => sum + (file.size || 0), 0) || 0;
+
+        // Fetch active API keys count
+        const { count: apiKeyCount } = await supabase
+          .from("api_keys")
+          .select("*", { count: "exact", head: true })
+          .is("revoked_at", null);
+
+        setStats({
+          totalUsers: userCount || 0,
+          totalExecutions: execCount || 0,
+          totalFiles: fileCount || 0,
+          activeApiKeys: apiKeyCount || 0,
+          todayExecutions: todayCount || 0,
+          totalStorage: totalStorage,
+        });
+      } catch (error) {
+        console.error("Failed to fetch admin stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, []);
+
+  const displayStats = [
+    { 
+      title: "Total Executions", 
+      value: loading ? "..." : stats.totalExecutions.toLocaleString(), 
+      change: loading ? "..." : `+${stats.todayExecutions} today`, 
+      detail: "All-time operations", 
+      icon: BarChart3, 
+      color: "text-violet-400" 
+    },
+    { 
+      title: "Registered Users", 
+      value: loading ? "..." : stats.totalUsers.toLocaleString(), 
+      change: "Active accounts", 
+      detail: `${stats.activeApiKeys} API keys`, 
+      icon: Users, 
+      color: "text-indigo-400" 
+    },
+    { 
+      title: "Storage Used", 
+      value: loading ? "..." : `${(stats.totalStorage / (1024 * 1024)).toFixed(1)} MB`, 
+      change: `${stats.totalFiles} files`, 
+      detail: "Across all buckets", 
+      icon: Cpu, 
+      color: "text-violet-400" 
+    },
+    { 
+      title: "Database Status", 
+      value: "Healthy", 
+      change: "Supabase PostgreSQL", 
+      detail: "All systems operational", 
+      icon: Database, 
+      color: "text-indigo-400" 
+    }
   ];
 
   const alerts = [
@@ -21,7 +123,7 @@ export default function AdminOverviewPage() {
     <div className="space-y-6">
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((item, idx) => {
+        {displayStats.map((item, idx) => {
           const Icon = item.icon;
           return (
             <div key={idx} className="bg-[#120B27]/40 border border-violet-500/10 rounded-2xl p-5 backdrop-blur-md">
