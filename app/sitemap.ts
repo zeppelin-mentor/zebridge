@@ -1,7 +1,23 @@
 import { MetadataRoute } from 'next'
+import { createClient } from '@/lib/supabase/server'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://zebridge.vercel.app'
+  
+  // Fetch published blog posts
+  const supabase = await createClient()
+  const { data: posts } = await supabase
+    .from('blog_posts')
+    .select('slug, updated_at')
+    .eq('status', 'published')
+    .not('published_at', 'is', null)
+  
+  const blogPosts: MetadataRoute.Sitemap = (posts || []).map((post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: new Date(post.updated_at),
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }))
   
   return [
     {
@@ -10,6 +26,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 1,
     },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    ...blogPosts,
     {
       url: `${baseUrl}/login`,
       lastModified: new Date(),

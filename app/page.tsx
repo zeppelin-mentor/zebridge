@@ -6,6 +6,7 @@ import IntegrationBanner from "@/components/landing/IntegrationBanner";
 import AppPreview from "@/components/landing/AppPreview";
 import Features from "@/components/landing/Features";
 import Pricing from "@/components/landing/Pricing";
+import BlogSection from "@/components/landing/BlogSection";
 import Footer from "@/components/landing/Footer";
 
 export default function Home() {
@@ -94,6 +95,9 @@ export default function Home() {
 
       {/* Transparent pricing plans */}
       <Pricing />
+
+      {/* Latest blog posts */}
+      <BlogSection />
 
       {/* Footer metadata details */}
       <Footer />
