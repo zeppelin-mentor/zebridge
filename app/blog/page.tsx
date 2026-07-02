@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Header from "@/components/landing/Header";
 import { Calendar, User, ArrowRight, BookOpen } from "lucide-react";
 
 interface BlogPost {
@@ -44,22 +45,7 @@ export default function BlogPage() {
   return (
     <div className="min-h-screen bg-[#090614] text-white">
       {/* Header */}
-      <header className="border-b border-white/5 bg-[#0D0A1A]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">Z</span>
-            </div>
-            <span className="text-xl font-bold">ZeBridge</span>
-          </Link>
-          <Link 
-            href="/"
-            className="text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            ← Back to Home
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="py-20 px-6">

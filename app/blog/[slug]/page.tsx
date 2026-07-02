@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Header from "@/components/landing/Header";
 import { useParams } from "next/navigation";
 import { Calendar, ArrowLeft, Tag } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -59,17 +60,20 @@ export default function BlogPostPage() {
 
   if (notFound || !post) {
     return (
-      <div className="min-h-screen bg-[#090614] text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Post Not Found</h1>
-          <p className="text-slate-400 mb-6">The blog post you're looking for doesn't exist.</p>
-          <Link 
-            href="/blog"
-            className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Blog
-          </Link>
+      <div className="min-h-screen bg-[#090614] text-white">
+        <Header />
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-4">Post Not Found</h1>
+            <p className="text-slate-400 mb-6">The blog post you're looking for doesn't exist.</p>
+            <Link 
+              href="/blog"
+              className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Blog
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -78,23 +82,7 @@ export default function BlogPostPage() {
   return (
     <div className="min-h-screen bg-[#090614] text-white">
       {/* Header */}
-      <header className="border-b border-white/5 bg-[#0D0A1A]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">Z</span>
-            </div>
-            <span className="text-xl font-bold">ZeBridge</span>
-          </Link>
-          <Link 
-            href="/blog"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Blog
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       {/* Article */}
       <article className="py-12 px-6">

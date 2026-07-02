@@ -27,6 +27,9 @@ export default function Header() {
             <Link href="#agents" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
               Supported Agents
             </Link>
+            <Link href="/blog" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
+              Blog
+            </Link>
             <Link href="#docs" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
               Documentation
             </Link>
@@ -80,6 +83,13 @@ export default function Header() {
               className="block rounded-md px-3 py-2 text-base font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
             >
               Supported Agents
+            </Link>
+            <Link
+              href="/blog"
+              onClick={() => setIsOpen(false)}
+              className="block rounded-md px-3 py-2 text-base font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
+            >
+              Blog
             </Link>
             <Link
               href="#docs"
