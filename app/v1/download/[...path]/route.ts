@@ -7,10 +7,10 @@ import { createServiceClient } from '@/lib/supabase/server'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const pathSegments = params.path
+    const pathSegments = (await params).path
 
     if (!pathSegments || pathSegments.length < 4) {
       return NextResponse.json(
