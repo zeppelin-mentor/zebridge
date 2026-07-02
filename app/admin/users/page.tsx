@@ -150,54 +150,64 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-violet-500/10 font-mono">
-              {filteredUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-white/[0.01] transition-colors">
-                  {/* Email */}
-                  <td className="p-4">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-200 font-sans text-xs">{u.email}</span>
-                      <span className="text-[10px] text-slate-500 mt-0.5 font-mono">{u.id.slice(0, 8)}...</span>
-                    </div>
-                  </td>
-                  {/* Role badge */}
-                  <td className="p-4">
-                    {u.role === "admin" ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded font-bold uppercase">
-                        <ShieldAlert className="h-3 w-3" />
-                        Admin
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-bold uppercase">
-                        User
-                      </span>
-                    )}
-                  </td>
-                  {/* Select plan tier dropdown */}
-                  <td className="p-4">
-                    <select
-                      value={u.plan}
-                      onChange={(e) => handleUpdatePlan(u.id, e.target.value as any)}
-                      className="bg-slate-950 border border-violet-500/10 px-2.5 py-1 text-[11px] rounded text-slate-300 font-mono focus:outline-none"
-                    >
-                      <option value="free">free</option>
-                      <option value="pro">pro</option>
-                      <option value="team">team</option>
-                      <option value="enterprise">enterprise</option>
-                    </select>
-                  </td>
-                  <td className="p-4 text-slate-400">{u.joinedAt}</td>
-                  <td className="p-4 text-slate-300">{u.keysCount} active</td>
-                  {/* Action triggers */}
-                  <td className="p-4 text-right pr-6">
-                    <button
-                      onClick={() => handleToggleRole(u.id, u.role)}
-                      className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[10px] font-bold border transition-colors bg-violet-500/5 border-violet-500/10 text-violet-400 hover:bg-violet-500/10"
-                    >
-                      {u.role === "admin" ? "Remove Admin" : "Make Admin"}
-                    </button>
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-white/[0.01] transition-colors">
+                    {/* Email */}
+                    <td className="p-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-200 font-sans text-xs">{u.email}</span>
+                        <span className="text-[10px] text-slate-500 mt-0.5 font-mono">{u.id.slice(0, 8)}...</span>
+                      </div>
+                    </td>
+                    {/* Role badge */}
+                    <td className="p-4">
+                      {u.role === "admin" ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded font-bold uppercase">
+                          <ShieldAlert className="h-3 w-3" />
+                          Admin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-bold uppercase">
+                          User
+                        </span>
+                      )}
+                    </td>
+                    {/* Select plan tier dropdown */}
+                    <td className="p-4">
+                      <select
+                        value={u.plan}
+                        onChange={(e) => handleUpdatePlan(u.id, e.target.value as any)}
+                        className="bg-slate-950 border border-violet-500/10 px-2.5 py-1 text-[11px] rounded text-slate-300 font-mono focus:outline-none"
+                      >
+                        <option value="free">free</option>
+                        <option value="pro">pro</option>
+                        <option value="team">team</option>
+                        <option value="enterprise">enterprise</option>
+                      </select>
+                    </td>
+                    <td className="p-4 text-slate-400">{u.joinedAt}</td>
+                    <td className="p-4 text-slate-300">{u.keysCount} active</td>
+                    {/* Action triggers */}
+                    <td className="p-4 text-right pr-6">
+                      <button
+                        onClick={() => handleToggleRole(u.id, u.role)}
+                        className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[10px] font-bold border transition-colors bg-violet-500/5 border-violet-500/10 text-violet-400 hover:bg-violet-500/10"
+                      >
+                        {u.role === "admin" ? "Remove Admin" : "Make Admin"}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="p-12 text-center text-slate-500">
+                    {search || selectedPlan !== "All" 
+                      ? "No users match your search criteria" 
+                      : "No users found in the system"}
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
