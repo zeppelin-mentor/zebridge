@@ -37,33 +37,19 @@ export async function POST(request: NextRequest) {
     // 4. Create execution record
     const supabase = createServiceClient()
     
-    const { data: tool } = await supabase
-      .from('tools')
-      .select('id')
-      .eq('slug', 'remove-background')
-      .single()
-
-    if (!tool) {
-      return NextResponse.json(
-        { error: 'Tool not found' },
-        { status: 404 }
-      )
-    }
-
-    const { data: execution, error: execError } = await supabase
+    const { data: execution } = await supabase
       .from('executions')
       .insert({
         user_id: authContext.userId,
-        tool_id: tool.id,
+        api_key_id: authContext.apiKeyId,
+        tool_slug: 'remove-background',
         status: 'processing',
-        input_params: validatedInput, // Store only parameters
+        input_params: validatedInput,
       })
-      .select()
+      .select('id')
       .single()
 
-    if (execError) {
-      throw execError
-    }
+    if (!execution) throw new Error('Failed to create execution record')
 
     // 5. Process the tool directly (synchronously)
     const startTime = Date.now()
@@ -74,14 +60,15 @@ export async function POST(request: NextRequest) {
         authContext.userId,
         execution.id
       )
+      const duration = Date.now() - startTime
 
       // Update execution with result (store only metadata)
       await supabase
         .from('executions')
         .update({
-          status: 'completed',
-          output_metadata: result, // Only metadata, not full files
-          duration: Date.now() - startTime,
+          status: 'success',
+          output_metadata: result,
+          duration_ms: duration,
           completed_at: new Date().toISOString(),
         })
         .eq('id', execution.id)
@@ -91,10 +78,10 @@ export async function POST(request: NextRequest) {
 
       // Return successful response
       return NextResponse.json({
+        success: true,
+        data: result,
         executionId: execution.id,
-        status: 'completed',
-        output: result,
-        duration: Date.now() - startTime,
+        duration,
       }, {
         status: 200,
         headers: {
@@ -103,13 +90,14 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (toolError) {
+      const duration = Date.now() - startTime
       // Update execution with error
       await supabase
         .from('executions')
         .update({
-          status: 'failed',
+          status: 'error',
           error: toolError instanceof Error ? toolError.message : 'Unknown error',
-          duration: Date.now() - startTime,
+          duration_ms: duration,
           completed_at: new Date().toISOString(),
         })
         .eq('id', execution.id)

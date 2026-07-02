@@ -19,44 +19,61 @@ export default function AgentsTab() {
 
   const agents: AgentItem[] = [
     {
-      name: "Kiro IDE",
-      slug: "kiro-ide",
+      name: "ZeBridge MCP Server",
+      slug: "zebridge-mcp",
       status: "Active",
-      requests: "0",
+      requests: "Connected",
       lastSeen: "Just now",
-      latency: "12ms",
+      latency: "8ms",
       configType: "json",
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "type": "sse",
-      "url": "https://zebridge.io/mcp",
+      "url": "http://localhost:3000/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
     }
   }
-}`
+}
+
+✅ Status: Connected
+📦 Tools Discovered: 12
+   • pdf_merge - Merge multiple PDF files
+   • pdf_split - Split PDF into multiple files
+   • remove_background - Remove image backgrounds
+   • image_upscale - Upscale image resolution
+   • text_to_docx - Convert text to DOCX
+   • markdown_to_pdf - Convert Markdown to PDF
+   • generate_receipt - Generate receipt PDFs
+   • generate_qrcode - Generate QR codes
+   • generate_invoice - Generate invoice PDFs
+   • html_to_pdf - Convert HTML to PDF
+   • json_to_excel - Convert JSON to Excel/CSV
+   • ocr_extract_text - Extract text from images`
     },
     {
       name: "Claude Code",
       slug: "claude-code",
-      status: "Active",
+      status: "Inactive",
       requests: "0",
       lastSeen: "Not connected",
-      latency: "14ms",
+      latency: "N/A",
       configType: "json",
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "type": "sse",
       "url": "https://zebridge.io/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
     }
   }
-}`
+}
+
+// For Claude Desktop, add this to:
+// Windows: %APPDATA%/Claude/claude_desktop_config.json
+// macOS: ~/Library/Application Support/Claude/claude_desktop_config.json`
     },
     {
       name: "Cursor IDE",
@@ -64,9 +81,21 @@ export default function AgentsTab() {
       status: "Inactive",
       requests: "0",
       lastSeen: "Not connected",
-      latency: "19ms",
-      configType: "url",
-      configBlock: "https://zebridge.io/mcp?key=YOUR_API_KEY_HERE"
+      latency: "N/A",
+      configType: "json",
+      configBlock: `{
+  "mcpServers": {
+    "zebridge": {
+      "url": "https://zebridge.io/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
+
+// Add to Cursor MCP configuration
+// Settings > Extensions > MCP Servers`
     },
     {
       name: "Windsurf",
@@ -74,19 +103,21 @@ export default function AgentsTab() {
       status: "Inactive",
       requests: "0",
       lastSeen: "Not connected",
-      latency: "22ms",
+      latency: "N/A",
       configType: "json",
       configBlock: `{
   "mcpServers": {
     "zebridge": {
-      "type": "sse",
       "url": "https://zebridge.io/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
     }
   }
-}`
+}
+
+// Add to Windsurf MCP configuration
+// Check Windsurf docs for config file location`
     }
   ];
 

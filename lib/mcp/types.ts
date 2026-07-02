@@ -11,6 +11,7 @@ export interface ToolDefinition {
 export interface ToolContext {
   userId: string
   executionId: string
+  apiKeyId?: string
 }
 
 export type ToolResult = CallToolResult

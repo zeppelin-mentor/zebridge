@@ -2,6 +2,13 @@
   "mcpServers": {
     "supabase": {
       "url": "https://mcp.supabase.com/mcp?project_ref=duhruaqxuvwvyphyuold"
+    },
+    "zebridge": {
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "Authorization": "Bearer zbr_5e5bac25c7e3abacbfbd4de3c049153a8fa12f0c7ac11cd0f23146f76f40593c"
+      },
+      "disabled": false
     }
   }
 }

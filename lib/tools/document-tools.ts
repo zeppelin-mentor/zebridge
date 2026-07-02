@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { uploadFile } from '@/lib/storage/upload'
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 
 // Text to DOCX conversion
 export async function textToDocx(
@@ -9,32 +10,42 @@ export async function textToDocx(
 ): Promise<{ outputUrl: string; filename: string }> {
   const { text, title = 'Document', fontSize = 12 } = input
   
-  // Create a simple DOCX structure (XML-based)
-  // For production, use a library like docx or officegen
-  const docxContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:p>
-      <w:pPr>
-        <w:pStyle w:val="Heading1"/>
-      </w:pPr>
-      <w:r>
-        <w:t>${title}</w:t>
-      </w:r>
-    </w:p>
-    <w:p>
-      <w:r>
-        <w:t>${text.replace(/\n/g, '</w:t></w:r></w:p><w:p><w:r><w:t>')}</w:t>
-      </w:r>
-    </w:p>
-  </w:body>
-</w:document>`
-
+  // Split text into paragraphs
+  const paragraphs = text.split('\n').filter(line => line.trim())
+  
+  // Create document with title and content
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: [
+        // Title as heading
+        new Paragraph({
+          text: title,
+          heading: HeadingLevel.HEADING_1,
+        }),
+        // Content paragraphs
+        ...paragraphs.map(para => 
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: para,
+                size: fontSize * 2, // docx uses half-points
+              }),
+            ],
+          })
+        ),
+      ],
+    }],
+  })
+  
+  // Generate DOCX file as buffer
+  const buffer = await Packer.toBuffer(doc)
+  
   const filename = `${title.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.docx`
   const result = await uploadFile(
     userId,
     executionId,
-    Buffer.from(docxContent),
+    buffer,
     filename,
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'outputs'

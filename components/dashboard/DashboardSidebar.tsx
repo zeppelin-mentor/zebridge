@@ -10,7 +10,8 @@ import {
   Terminal, 
   LogOut, 
   ArrowLeft,
-  UserCircle
+  UserCircle,
+  FolderOpen
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +29,7 @@ export default function DashboardSidebar({ user, onLogout }: SidebarProps) {
     { id: "agents", label: "Active Agents", href: "/dashboard/agents", icon: Cpu },
     { id: "tools", label: "Tool Registry", href: "/dashboard/tools", icon: FileCode },
     { id: "keys", label: "API Keys", href: "/dashboard/keys", icon: Key },
+    { id: "files", label: "My Files", href: "/dashboard/files", icon: FolderOpen },
     { id: "logs", label: "Audit Logs", href: "/dashboard/logs", icon: Terminal },
   ];
 

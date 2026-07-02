@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { ToolDefinition } from '../types'
 import { mergePdf, splitPdf, pdfToWord } from '@/lib/tools/pdf-tools'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export const pdfTools: ToolDefinition[] = [
   {
@@ -14,11 +15,40 @@ export const pdfTools: ToolDefinition[] = [
       try {
         const result = await mergePdf(input, context.userId, context.executionId)
 
+        const supabase = createServiceClient()
+        const storagePath = `${context.userId}/${context.executionId}/${result.filename}`
+        const { data: fileData } = await supabase.storage
+          .from('outputs')
+          .download(storagePath)
+        
+        if (!fileData) {
+          throw new Error('Failed to retrieve file content')
+        }
+        
+        const buffer = Buffer.from(await fileData.arrayBuffer())
+        const base64Content = buffer.toString('base64')
+
         return {
-          content: [{
-            type: 'text' as const,
-            text: `PDF merge completed. Output: ${result.outputUrl}. Pages: ${result.pageCount}`,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `✅ PDFs merged successfully!
+
+📄 Output: ${result.filename}
+📑 Total Pages: ${result.pageCount}
+🔗 Online URL: ${result.outputUrl}
+
+The merged PDF is ready to download.`,
+            },
+            {
+              type: 'resource' as const,
+              resource: {
+                uri: result.outputUrl,
+                mimeType: 'application/pdf',
+                text: base64Content,
+              },
+            },
+          ],
         }
       } catch (error) {
         return {

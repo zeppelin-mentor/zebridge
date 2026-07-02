@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { ToolDefinition } from '../types'
 import { generateQRCode, ocrImage, generateInvoice } from '@/lib/tools/ai-tools'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export const aiTools: ToolDefinition[] = [
   {
@@ -14,11 +15,41 @@ export const aiTools: ToolDefinition[] = [
       try {
         const result = await generateQRCode(input, context.userId, context.executionId)
 
+        const supabase = createServiceClient()
+        const storagePath = `${context.userId}/${context.executionId}/${result.filename}`
+        const { data: fileData } = await supabase.storage
+          .from('outputs')
+          .download(storagePath)
+        
+        if (!fileData) {
+          throw new Error('Failed to retrieve file content')
+        }
+        
+        const buffer = Buffer.from(await fileData.arrayBuffer())
+        const base64Content = buffer.toString('base64')
+
         return {
-          content: [{
-            type: 'text' as const,
-            text: `QR code generated successfully. Output: ${result.outputUrl}`,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `✅ QR code generated successfully!
+
+📱 Data: ${input.data}
+📏 Size: ${input.size || 256}px
+📄 Filename: ${result.filename}
+🔗 Online URL: ${result.outputUrl}
+
+The QR code image has been created and is ready to download.`,
+            },
+            {
+              type: 'resource' as const,
+              resource: {
+                uri: result.outputUrl,
+                mimeType: 'image/png',
+                text: base64Content,
+              },
+            },
+          ],
         }
       } catch (error) {
         return {
@@ -86,11 +117,42 @@ export const aiTools: ToolDefinition[] = [
       try {
         const result = await generateInvoice(input, context.userId, context.executionId)
 
+        const supabase = createServiceClient()
+        const storagePath = `${context.userId}/${context.executionId}/${result.filename}`
+        const { data: fileData } = await supabase.storage
+          .from('outputs')
+          .download(storagePath)
+        
+        if (!fileData) {
+          throw new Error('Failed to retrieve file content')
+        }
+        
+        const buffer = Buffer.from(await fileData.arrayBuffer())
+        const base64Content = buffer.toString('base64')
+
         return {
-          content: [{
-            type: 'text' as const,
-            text: `Invoice generated successfully. Output: ${result?.outputUrl || 'Unknown URL'}`,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `✅ Invoice generated successfully!
+
+📄 Invoice #: ${input.invoiceNumber}
+💼 From: ${input.from.name}
+🏢 To: ${input.to.name}
+📄 Filename: ${result.filename}
+🔗 Online URL: ${result.outputUrl || 'Unknown URL'}
+
+The invoice PDF has been created and is ready to download.`,
+            },
+            {
+              type: 'resource' as const,
+              resource: {
+                uri: result.outputUrl || '',
+                mimeType: 'application/pdf',
+                text: base64Content,
+              },
+            },
+          ],
         }
       } catch (error) {
         return {

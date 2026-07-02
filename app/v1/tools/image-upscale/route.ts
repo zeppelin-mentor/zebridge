@@ -22,49 +22,44 @@ export async function POST(request: NextRequest) {
     const validatedInput = ImageUpscaleSchema.parse(body)
 
     const supabase = createServiceClient()
-    const { data: tool } = await supabase
-      .from('tools')
-      .select('id')
-      .eq('slug', 'image-upscale')
-      .single()
-
-    if (!tool) {
-      return NextResponse.json({ error: 'Tool not found' }, { status: 404 })
-    }
 
     const { data: execution } = await supabase
       .from('executions')
       .insert({
         user_id: authContext.userId,
-        tool_id: tool.id,
+        api_key_id: authContext.apiKeyId,
+        tool_slug: 'image-upscale',
         status: 'processing',
         input_params: validatedInput,
       })
-      .select()
+      .select('id')
       .single()
+
+    if (!execution) throw new Error('Failed to create execution record')
 
     const startTime = Date.now()
     
     try {
-      const result = await upscaleImage(validatedInput, authContext.userId, execution!.id)
+      const result = await upscaleImage(validatedInput, authContext.userId, execution.id)
+      const duration = Date.now() - startTime
 
       await supabase
         .from('executions')
         .update({
-          status: 'completed',
+          status: 'success',
           output_metadata: result,
-          duration: Date.now() - startTime,
+          duration_ms: duration,
           completed_at: new Date().toISOString(),
         })
-        .eq('id', execution!.id)
+        .eq('id', execution.id)
 
       await incrementUsage(authContext.userId)
 
       return NextResponse.json({
-        executionId: execution!.id,
-        status: 'completed',
-        output: result,
-        duration: Date.now() - startTime,
+        success: true,
+        data: result,
+        executionId: execution.id,
+        duration,
       }, {
         headers: {
           'X-RateLimit-Remaining': remaining.toString(),
@@ -72,15 +67,16 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (toolError) {
+      const duration = Date.now() - startTime
       await supabase
         .from('executions')
         .update({
-          status: 'failed',
+          status: 'error',
           error: toolError instanceof Error ? toolError.message : 'Unknown error',
-          duration: Date.now() - startTime,
+          duration_ms: duration,
           completed_at: new Date().toISOString(),
         })
-        .eq('id', execution!.id)
+        .eq('id', execution.id)
 
       throw toolError
     }

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { ToolDefinition } from '../types'
 import { textToDocx, markdownToPdf, generateReceipt, htmlToPdf, jsonToExcel } from '@/lib/tools/document-tools'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export const documentTools: ToolDefinition[] = [
   {
@@ -15,11 +16,39 @@ export const documentTools: ToolDefinition[] = [
       try {
         const result = await textToDocx(input, context.userId, context.executionId)
         
+        // Get file content for client-side download
+        const supabase = createServiceClient()
+        const storagePath = `${context.userId}/${context.executionId}/${result.filename}`
+        const { data: fileData } = await supabase.storage
+          .from('outputs')
+          .download(storagePath)
+        
+        let base64Content = ''
+        if (fileData) {
+          const buffer = Buffer.from(await fileData.arrayBuffer())
+          base64Content = buffer.toString('base64')
+        }
+        
         return {
-          content: [{
-            type: 'text' as const,
-            text: `DOCX created successfully. Output: ${result.outputUrl}`,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `✅ DOCX document created successfully!
+
+📄 Filename: ${result.filename}
+🔗 URL: ${result.outputUrl}
+
+File saved to dashboard. Kiro IDE will save this file locally.`,
+            },
+            {
+              type: 'resource' as const,
+              resource: {
+                uri: `file:///${result.filename}`,
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                blob: base64Content,
+              }
+            }
+          ],
         }
       } catch (error) {
         return {
@@ -44,11 +73,39 @@ export const documentTools: ToolDefinition[] = [
       try {
         const result = await markdownToPdf(input, context.userId, context.executionId)
         
+        const supabase = createServiceClient()
+        const storagePath = `${context.userId}/${context.executionId}/${result.filename}`
+        const { data: fileData } = await supabase.storage
+          .from('outputs')
+          .download(storagePath)
+        
+        if (!fileData) {
+          throw new Error('Failed to retrieve file content')
+        }
+        
+        const buffer = Buffer.from(await fileData.arrayBuffer())
+        const base64Content = buffer.toString('base64')
+        
         return {
-          content: [{
-            type: 'text' as const,
-            text: `PDF created successfully from Markdown. Output: ${result.outputUrl}`,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `✅ PDF created successfully from Markdown!
+
+📄 Filename: ${result.filename}
+🔗 Online URL: ${result.outputUrl}
+
+The PDF has been generated and is ready to download.`,
+            },
+            {
+              type: 'resource' as const,
+              resource: {
+                uri: result.outputUrl,
+                mimeType: 'application/pdf',
+                text: base64Content,
+              },
+            },
+          ],
         }
       } catch (error) {
         return {
@@ -91,7 +148,14 @@ export const documentTools: ToolDefinition[] = [
         return {
           content: [{
             type: 'text' as const,
-            text: `Receipt generated successfully. Output: ${result.outputUrl}`,
+            text: `✅ Receipt generated successfully!
+
+📄 Receipt #: ${input.receiptNumber}
+💰 Total: $${input.total.toFixed(2)}
+📄 Filename: ${result.filename}
+🔗 Download URL: ${result.outputUrl}
+
+The receipt has been saved to your dashboard Files section.`,
           }],
         }
       } catch (error) {
@@ -117,11 +181,39 @@ export const documentTools: ToolDefinition[] = [
       try {
         const result = await htmlToPdf(input, context.userId, context.executionId)
         
+        const supabase = createServiceClient()
+        const storagePath = `${context.userId}/${context.executionId}/${result.filename}`
+        const { data: fileData } = await supabase.storage
+          .from('outputs')
+          .download(storagePath)
+        
+        if (!fileData) {
+          throw new Error('Failed to retrieve file content')
+        }
+        
+        const buffer = Buffer.from(await fileData.arrayBuffer())
+        const base64Content = buffer.toString('base64')
+        
         return {
-          content: [{
-            type: 'text' as const,
-            text: `PDF created successfully from HTML. Output: ${result.outputUrl}`,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `✅ PDF created successfully from HTML!
+
+📄 Filename: ${result.filename}
+🔗 Online URL: ${result.outputUrl}
+
+The PDF has been generated and is ready to download.`,
+            },
+            {
+              type: 'resource' as const,
+              resource: {
+                uri: result.outputUrl,
+                mimeType: 'application/pdf',
+                text: base64Content,
+              },
+            },
+          ],
         }
       } catch (error) {
         return {
@@ -145,11 +237,40 @@ export const documentTools: ToolDefinition[] = [
       try {
         const result = await jsonToExcel(input, context.userId, context.executionId)
         
+        const supabase = createServiceClient()
+        const storagePath = `${context.userId}/${context.executionId}/${result.filename}`
+        const { data: fileData } = await supabase.storage
+          .from('outputs')
+          .download(storagePath)
+        
+        if (!fileData) {
+          throw new Error('Failed to retrieve file content')
+        }
+        
+        const buffer = Buffer.from(await fileData.arrayBuffer())
+        const base64Content = buffer.toString('base64')
+        
         return {
-          content: [{
-            type: 'text' as const,
-            text: `Excel file created successfully. Output: ${result.outputUrl}`,
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: `✅ Excel/CSV file created successfully!
+
+📄 Filename: ${result.filename}
+📊 Rows: ${input.data.length}
+🔗 Online URL: ${result.outputUrl}
+
+The file has been generated and is ready to download.`,
+            },
+            {
+              type: 'resource' as const,
+              resource: {
+                uri: result.outputUrl,
+                mimeType: 'text/csv',
+                text: base64Content,
+              },
+            },
+          ],
         }
       } catch (error) {
         return {

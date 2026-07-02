@@ -19,6 +19,7 @@ export async function uploadFile(
   
   const path = `${userId}/${executionId}/${filename}`
   
+  // Save to Supabase Storage
   const { error } = await supabase.storage
     .from(bucket)
     .upload(path, file, {
