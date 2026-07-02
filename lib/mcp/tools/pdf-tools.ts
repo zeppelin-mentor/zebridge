@@ -11,13 +11,23 @@ export const pdfTools: ToolDefinition[] = [
       outputFilename: z.string().optional().describe('Optional output filename'),
     }),
     handler: async (input, context) => {
-      const result = await mergePdf(input, context.userId, context.executionId)
+      try {
+        const result = await mergePdf(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `PDF merge completed. Output: ${result.outputUrl}. Pages: ${result.pageCount}`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `PDF merge completed. Output: ${result.outputUrl}. Pages: ${result.pageCount}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `PDF merge failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },
@@ -32,13 +42,23 @@ export const pdfTools: ToolDefinition[] = [
       })).optional().describe('Page ranges to extract (optional, defaults to individual pages)'),
     }),
     handler: async (input, context) => {
-      const result = await splitPdf(input, context.userId, context.executionId)
+      try {
+        const result = await splitPdf(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `PDF split completed. ${result.files?.length || 0} files created.`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `PDF split completed. ${result.files?.length || 0} files created.`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `PDF split failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },
@@ -50,13 +70,23 @@ export const pdfTools: ToolDefinition[] = [
       preserveFormatting: z.boolean().default(true).describe('Preserve original formatting'),
     }),
     handler: async (input, context) => {
-      const result = await pdfToWord(input, context.userId, context.executionId)
+      try {
+        const result = await pdfToWord(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `PDF to Word conversion completed. Output: ${result.outputUrl}`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `PDF to Word conversion completed. Output: ${result.outputUrl}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `PDF to Word conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },

@@ -1,10 +1,11 @@
 import { z } from 'zod'
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 export interface ToolDefinition {
   name: string
   description: string
   inputSchema: z.ZodType<any>
-  handler: (input: any, context: ToolContext) => Promise<ToolResult>
+  handler: (input: any, context: ToolContext) => Promise<CallToolResult>
 }
 
 export interface ToolContext {
@@ -12,11 +13,5 @@ export interface ToolContext {
   executionId: string
 }
 
-export interface ToolResult {
-  content: Array<{ 
-    type: 'text' | 'image'
-    text?: string
-    data?: string
-    mimeType?: string 
-  }>
-}
+export type ToolResult = CallToolResult
+

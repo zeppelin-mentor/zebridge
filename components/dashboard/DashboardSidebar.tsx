@@ -9,7 +9,8 @@ import {
   Key, 
   Terminal, 
   LogOut, 
-  ArrowLeft 
+  ArrowLeft,
+  UserCircle
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -86,7 +87,12 @@ export default function DashboardSidebar({ user, onLogout }: SidebarProps) {
 
       {/* User Footer Profile */}
       <div className="pt-4 border-t border-white/5 space-y-3">
-        <div className="flex items-center gap-3 px-2">
+        <Link
+          href="/dashboard/profile"
+          className={`flex items-center gap-3 px-2 hover:bg-white/5 rounded-xl py-2 transition-colors ${
+            pathname === '/dashboard/profile' ? 'bg-white/5' : ''
+          }`}
+        >
           <div className="h-10 w-10 rounded-full overflow-hidden border border-white/10">
             <img src="/developer_avatar.png" alt="User Profile" className="h-full w-full object-cover" />
           </div>
@@ -97,7 +103,7 @@ export default function DashboardSidebar({ user, onLogout }: SidebarProps) {
               {user?.plan || "free"} Plan
             </span>
           </div>
-        </div>
+        </Link>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"

@@ -19,6 +19,8 @@ export default function DashboardHeader() {
         return { title: "Developer API Keys", desc: "Manage authentication tokens for the REST API and MCP server." };
       case "/dashboard/logs":
         return { title: "Security Audit Logs", desc: "Review complete histories of secure operations and payloads." };
+      case "/dashboard/profile":
+        return { title: "Profile Settings", desc: "Manage your account information and preferences." };
       default:
         return { title: "Workspace", desc: "ZeBridge developer workspace" };
     }

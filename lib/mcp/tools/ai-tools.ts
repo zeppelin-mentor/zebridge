@@ -11,13 +11,23 @@ export const aiTools: ToolDefinition[] = [
       size: z.number().int().positive().default(256).describe('Size of the QR code in pixels'),
     }),
     handler: async (input, context) => {
-      const result = await generateQRCode(input, context.userId, context.executionId)
+      try {
+        const result = await generateQRCode(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `QR code generated successfully. Output: ${result.outputUrl}`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `QR code generated successfully. Output: ${result.outputUrl}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `QR code generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },
@@ -29,13 +39,23 @@ export const aiTools: ToolDefinition[] = [
       language: z.string().default('eng').describe('Language code (e.g., eng, fra, spa)'),
     }),
     handler: async (input, context) => {
-      const result = await ocrImage(input, context.userId, context.executionId)
-
-      return {
-        content: [{
-          type: 'text',
-          text: `OCR completed. Extracted text: ${result.text}`,
-        }],
+      try {
+        const result = await ocrImage(input, context.userId, context.executionId)
+        
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `OCR completed. Extracted text: ${result?.text || 'No text extracted'}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `OCR extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },
@@ -63,13 +83,23 @@ export const aiTools: ToolDefinition[] = [
       currency: z.string().default('USD').describe('Currency code'),
     }),
     handler: async (input, context) => {
-      const result = await generateInvoice(input, context.userId, context.executionId)
+      try {
+        const result = await generateInvoice(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `Invoice generated successfully. Output: ${result.outputUrl}`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Invoice generated successfully. Output: ${result?.outputUrl || 'Unknown URL'}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Invoice generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },

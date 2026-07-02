@@ -1,79 +1,150 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, Key, Eye, EyeOff, Check, Copy, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Key, Check, Copy, AlertTriangle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 interface ApiKeyItem {
   id: string;
   name: string;
-  key: string;
-  createdAt: string;
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
 }
 
 export default function ApiKeysTab() {
+  const supabase = createClient();
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newKeyName, setNewKeyName] = useState("");
-  const [visibleKeyId, setVisibleKeyId] = useState<string | null>(null);
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load keys from localStorage on mount
   useEffect(() => {
-    const savedKeys = localStorage.getItem("zebridge_api_keys");
-    if (savedKeys) {
-      setKeys(JSON.parse(savedKeys));
-    } else {
-      const defaultKeys: ApiKeyItem[] = [
-        { id: "1", name: "Claude Code CLI Connection", key: "zb_prod_8f3a2901db54c8e762c4bf1a986e", createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-        { id: "2", name: "Cursor Editor Integration", key: "zb_prod_23a9b8f10cd293ef64e81a8b92d3", createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() }
-      ];
-      setKeys(defaultKeys);
-      localStorage.setItem("zebridge_api_keys", JSON.stringify(defaultKeys));
-    }
+    fetchKeys();
   }, []);
 
-  const saveKeys = (newKeys: ApiKeyItem[]) => {
-    setKeys(newKeys);
-    localStorage.setItem("zebridge_api_keys", JSON.stringify(newKeys));
-  };
+  async function fetchKeys() {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setError('Not authenticated');
+        return;
+      }
 
-  const handleCreateKey = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newKeyName) return;
+      const { data, error } = await supabase
+        .from('api_keys')
+        .select('id, name, prefix, created_at, last_used_at, revoked_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    // Generate random mock key
-    const randomHex = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    const generatedKey = `zb_prod_${randomHex.slice(0, 24)}`;
-    
-    const newKeyItem: ApiKeyItem = {
-      id: Math.random().toString(),
-      name: newKeyName,
-      key: generatedKey,
-      createdAt: new Date().toISOString()
-    };
-
-    const updatedKeys = [...keys, newKeyItem];
-    saveKeys(updatedKeys);
-    setNewKeyName("");
-    setNewlyCreatedKey(generatedKey);
-    setVisibleKeyId(newKeyItem.id);
-  };
-
-  const handleDeleteKey = (id: string) => {
-    if (confirm("Are you sure you want to delete this API Key? AI clients using this key will immediately lose access to ZeBridge tools.")) {
-      const updatedKeys = keys.filter(k => k.id !== id);
-      saveKeys(updatedKeys);
+      if (error) throw error;
+      
+      setKeys(data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching keys:', err);
+      setError('Failed to load API keys');
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-  const handleCopyKey = (id: string, text: string) => {
+  async function handleCreateKey(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newKeyName.trim()) return;
+
+    try {
+      setError(null);
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setError('Not authenticated');
+        return;
+      }
+
+      // Generate API key on backend
+      const response = await fetch('/v1/user/api-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          name: newKeyName,
+          userId: user.id 
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to create key');
+      }
+
+      const data = await response.json();
+      setNewlyCreatedKey(data.apiKey);
+      setNewKeyName('');
+      fetchKeys();
+    } catch (err) {
+      console.error('Error creating key:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create API key');
+    }
+  }
+
+  async function handleDeleteKey(keyId: string) {
+    if (!confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Use RPC function to revoke key
+      const { error } = await supabase.rpc('revoke_api_key', {
+        p_key_id: keyId,
+        p_user_id: user.id,
+      });
+
+      if (error) throw error;
+
+      fetchKeys();
+    } catch (err) {
+      console.error('Error revoking key:', err);
+      setError('Failed to revoke API key');
+    }
+  }
+
+  function handleCopyKey(id: string, text: string) {
     navigator.clipboard.writeText(text);
     setCopiedKeyId(id);
     setTimeout(() => setCopiedKeyId(null), 2000);
-  };
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-400 border-r-transparent"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider">Error</h4>
+            <p className="text-xs text-slate-400 mt-1">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Warning Alert Banner */}
       <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3">
         <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
@@ -98,7 +169,8 @@ export default function ApiKeysTab() {
           />
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white hover:bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-950 transition-colors shrink-0"
+            disabled={!newKeyName.trim()}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white hover:bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-950 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="h-4 w-4" />
             Generate Secret Key
@@ -146,52 +218,42 @@ export default function ApiKeysTab() {
         {keys.length > 0 ? (
           <div className="space-y-3">
             {keys.map((item) => {
-              const isVisible = visibleKeyId === item.id;
-              const maskedKey = `${item.key.slice(0, 12)}••••••••••••••••••••`;
+              const maskedKey = `${item.prefix}••••••••••••••••••••`;
               
               return (
-                <div key={item.id} className="bg-slate-900/30 border border-white/5 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/10 transition-colors">
+                <div key={item.id} className={`bg-slate-900/30 border ${item.revoked_at ? 'border-red-900/50' : 'border-white/5'} rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/10 transition-colors`}>
                   <div className="space-y-1.5 min-w-0">
-                    <span className="text-xs font-bold text-slate-200 block truncate">{item.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-200 block truncate">{item.name}</span>
+                      {item.revoked_at && (
+                        <span className="text-[9px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded font-bold uppercase">
+                          Revoked
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
                       <Key className="h-3 w-3 shrink-0" />
                       <span className="truncate select-all text-slate-400">
-                        {isVisible ? item.key : maskedKey}
+                        {maskedKey}
                       </span>
+                    </div>
+                    <div className="text-[10px] text-slate-600">
+                      Created: {new Date(item.created_at).toLocaleDateString()}
+                      {item.last_used_at && ` • Last used: ${new Date(item.last_used_at).toLocaleDateString()}`}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
-                    {/* Toggle visibility */}
-                    <button
-                      onClick={() => setVisibleKeyId(isVisible ? null : item.id)}
-                      className="p-2 rounded-lg border border-white/5 bg-slate-900 text-slate-400 hover:text-white transition-colors"
-                      title={isVisible ? "Hide Key" : "Reveal Key"}
-                    >
-                      {isVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    </button>
-
-                    {/* Copy button */}
-                    <button
-                      onClick={() => handleCopyKey(item.id, item.key)}
-                      className="p-2 rounded-lg border border-white/5 bg-slate-900 text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 text-[11px]"
-                      title="Copy Key"
-                    >
-                      {copiedKeyId === item.id ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-
                     {/* Delete button */}
-                    <button
-                      onClick={() => handleDeleteKey(item.id)}
-                      className="p-2 rounded-lg border border-red-500/10 bg-red-500/5 text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Revoke Key"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {!item.revoked_at && (
+                      <button
+                        onClick={() => handleDeleteKey(item.id)}
+                        className="p-2 rounded-lg border border-red-500/10 bg-red-500/5 text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="Revoke Key"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );

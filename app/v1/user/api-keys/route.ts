@@ -38,15 +38,14 @@ export async function GET(request: NextRequest) {
 // POST - Create new API key
 export async function POST(request: NextRequest) {
   try {
-    const authContext = await validateApiKey(request)
-    if (!authContext) {
-      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
+    const body = await request.json();
+    const { name, userId } = body;
+
+    if (!userId || !name) {
+      return NextResponse.json({ error: 'userId and name are required' }, { status: 400 })
     }
 
-    const body = await request.json()
-    const { name } = CreateKeySchema.parse(body)
-
-    const { apiKey, keyId } = await generateApiKey(authContext.userId, name)
+    const { apiKey, keyId } = await generateApiKey(userId, name)
 
     return NextResponse.json({
       apiKey, // Only shown once
@@ -56,7 +55,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid input', details: error.issues }, { status: 400 })
     }
 
     console.error('Error creating API key:', error)

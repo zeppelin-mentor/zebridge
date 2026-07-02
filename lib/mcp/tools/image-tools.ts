@@ -15,13 +15,23 @@ export const imageTools: ToolDefinition[] = [
       { message: 'Either imageUrl or imageBase64 must be provided' }
     ),
     handler: async (input, context) => {
-      const result = await removeBackground(input, context.userId, context.executionId)
+      try {
+        const result = await removeBackground(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `Background removal completed. Output: ${result.outputUrl}`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Background removal completed. Output: ${result.outputUrl}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Background removal failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },
@@ -33,13 +43,23 @@ export const imageTools: ToolDefinition[] = [
       scaleFactor: z.enum(['2x', '4x']).default('2x').describe('Upscale factor'),
     }),
     handler: async (input, context) => {
-      const result = await upscaleImage(input, context.userId, context.executionId)
+      try {
+        const result = await upscaleImage(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `Image upscale completed. Output: ${result.outputUrl}. New size: ${result.newSize.width}x${result.newSize.height}`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Image upscale completed. Output: ${result.outputUrl}. New size: ${result.newSize.width}x${result.newSize.height}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Image upscale failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },
@@ -51,13 +71,23 @@ export const imageTools: ToolDefinition[] = [
       quality: z.number().min(1).max(100).default(80).describe('Compression quality (1-100)'),
     }),
     handler: async (input, context) => {
-      const result = await compressImage(input, context.userId, context.executionId)
+      try {
+        const result = await compressImage(input, context.userId, context.executionId)
 
-      return {
-        content: [{
-          type: 'text',
-          text: `Image compression completed. Output: ${result.outputUrl}. Compression ratio: ${result.compressionRatio}`,
-        }],
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Image compression completed. Output: ${result.outputUrl}. Compression ratio: ${result.compressionRatio}`,
+          }],
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Image compression failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          }],
+          isError: true,
+        }
       }
     },
   },

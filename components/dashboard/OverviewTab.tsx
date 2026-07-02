@@ -2,177 +2,280 @@
 
 import React, { useEffect, useState } from "react";
 import { Activity, Clock, Database, CheckCircle2, TrendingUp, Cpu } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+interface Stats {
+  total_executions: number;
+  successful_executions: number;
+  failed_executions: number;
+  avg_duration_ms: number;
+  total_storage_bytes: number;
+  active_api_keys: number;
+  current_plan: string;
+}
 
 interface LogItem {
   id: string;
-  agent: string;
-  tool: string;
-  status: "success" | "warning" | "error";
-  duration: string;
-  time: string;
-  details: string;
+  tool_slug: string;
+  status: "success" | "error";
+  duration_ms: number;
+  created_at: string;
 }
 
 export default function OverviewTab() {
-  const [logs, setLogs] = useState<LogItem[]>([
-    { id: "1", agent: "Claude Code", tool: "PDF_to_Markdown", status: "success", duration: "1.2s", time: "Just now", details: "Converted contract_final.pdf (4.2 MB) to markdown" },
-    { id: "2", agent: "Cursor IDE", tool: "Image_Background_Remove", status: "success", duration: "2.4s", time: "2 min ago", details: "Processed user_avatar_hq.png - transparent alpha output" },
-    { id: "3", agent: "Windsurf", tool: "Invoice_OCR", status: "success", duration: "1.8s", time: "5 min ago", details: "Extracted $1,420.50 line-items from invoice_june_zeppelin.pdf" },
-    { id: "4", agent: "Gemini CLI", tool: "Merge_PDFs", status: "success", duration: "0.8s", time: "12 min ago", details: "Merged 3 source documents into bundle_unsigned.pdf" },
-    { id: "5", agent: "Claude Code", tool: "QR_Code_Generator", status: "success", duration: "0.2s", time: "20 min ago", details: "Generated static QR code for HTTPS endpoint" },
-  ]);
+  const supabase = createClient();
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [logs, setLogs] = useState<LogItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Simulate active stream
   useEffect(() => {
-    const interval = setInterval(() => {
-      const agents = ["Claude Code", "Cursor IDE", "Windsurf", "Gemini CLI"];
-      const tools = ["Background_Removal", "PDF_to_Excel", "Translate_Docs", "HTML_to_DOCX", "UUID_Generator"];
-      const details = [
-        "Removed background alpha mask from hero_banner.png",
-        "Exported 4 tables from finance_records.pdf to excel grid format",
-        "Translated agreement_de.txt into English document structure",
-        "Compiled report_summary.html into clean docx structure",
-        "Generated bulk set of v4 UUIDs for api sync validation"
-      ];
-      
-      const randomIdx = Math.floor(Math.random() * agents.length);
-      const newLog: LogItem = {
-        id: Math.random().toString(),
-        agent: agents[randomIdx],
-        tool: tools[randomIdx],
-        status: "success",
-        duration: (Math.random() * 1.5 + 0.2).toFixed(1) + "s",
-        time: "Just now",
-        details: details[randomIdx]
-      };
-
-      setLogs(prev => [newLog, ...prev.slice(0, 4)]);
-    }, 5000);
-
+    loadData();
+    const interval = setInterval(loadData, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, []);
+
+  async function loadData() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user stats using RPC function
+      const { data: statsData } = await supabase.rpc('get_user_stats', {
+        p_user_id: user.id,
+      });
+
+      if (statsData && statsData[0]) {
+        setStats(statsData[0]);
+      }
+
+      // Get recent executions
+      const { data: execData } = await supabase
+        .from('executions')
+        .select('id, tool_slug, status, duration_ms, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (execData) {
+        setLogs(execData);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function formatDuration(ms: number): string {
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  }
+
+  function getTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-400 border-r-transparent"></div>
+      </div>
+    );
+  }
+
+  const successRate = stats && stats.total_executions > 0
+    ? ((stats.successful_executions / stats.total_executions) * 100).toFixed(1)
+    : '0';
 
   return (
     <div className="space-y-6">
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { title: "Daily Executions", value: "4,281", change: "▲ 12.4% today", detail: "Standard queue routing", icon: Activity, iconColor: "text-emerald-400" },
-          { title: "Storage Space", value: "84.2 MB", change: "84% quota consumed", detail: "of 100 MB free tier", icon: Database, iconColor: "text-sky-400" },
-          { title: "Average Latency", value: "18 ms", change: "Stable execution latency", detail: "Region: US-East-1 (AWS)", icon: Clock, iconColor: "text-emerald-400" },
-          { title: "Success Rate", value: "99.8%", change: "2 issues caught today", detail: "OCR parsing fallbacks active", icon: CheckCircle2, iconColor: "text-sky-400" }
-        ].map((item, idx) => {
-          const Icon = item.icon;
-          return (
-            <div key={idx} className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
-              <div className="flex justify-between items-start">
-                <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{item.title}</span>
-                <Icon className={`h-4.5 w-4.5 ${item.iconColor}`} />
-              </div>
-              <div className="mt-2">
-                <span className="text-3xl font-extrabold text-white tracking-tight">{item.value}</span>
-                <div className="flex items-center gap-1 text-[10px] font-mono mt-1.5">
-                  <span className={item.change.startsWith("▲") ? "text-emerald-400 font-bold" : "text-slate-400"}>
-                    {item.change}
+        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
+          <div className="flex justify-between items-start">
+            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Executions</span>
+            <Activity className="h-4.5 w-4.5 text-emerald-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-3xl font-extrabold text-white tracking-tight">
+              {stats?.total_executions || 0}
+            </span>
+            <div className="flex items-center gap-1 text-[10px] font-mono mt-1.5">
+              <span className="text-slate-400">All time</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
+          <div className="flex justify-between items-start">
+            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Storage Used</span>
+            <Database className="h-4.5 w-4.5 text-sky-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-3xl font-extrabold text-white tracking-tight">
+              {formatBytes(stats?.total_storage_bytes || 0)}
+            </span>
+            <div className="flex items-center gap-1 text-[10px] font-mono mt-1.5">
+              <span className="text-slate-400">of 100 MB</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
+          <div className="flex justify-between items-start">
+            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Avg Latency</span>
+            <Clock className="h-4.5 w-4.5 text-emerald-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-3xl font-extrabold text-white tracking-tight">
+              {stats?.avg_duration_ms ? formatDuration(stats.avg_duration_ms) : '0ms'}
+            </span>
+            <div className="flex items-center gap-1 text-[10px] font-mono mt-1.5">
+              <span className="text-slate-400">Per execution</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
+          <div className="flex justify-between items-start">
+            <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Success Rate</span>
+            <CheckCircle2 className="h-4.5 w-4.5 text-sky-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-3xl font-extrabold text-white tracking-tight">
+              {successRate}%
+            </span>
+            <div className="flex items-center gap-1 text-[10px] font-mono mt-1.5">
+              <span className="text-slate-400">
+                {stats?.successful_executions || 0}/{stats?.total_executions || 0} tasks
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Plan Info */}
+      <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 backdrop-blur-md">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-1">Current Plan</h3>
+            <p className="text-lg font-bold text-emerald-400 capitalize">{stats?.current_plan || 'Free'}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-slate-400 mb-1">Active API Keys</p>
+            <p className="text-2xl font-bold text-white">{stats?.active_api_keys || 0}</p>
+          </div>
+        </div>
+        {stats?.current_plan === 'free' && (
+          <button className="mt-4 w-full px-4 py-2 bg-emerald-400 text-black text-sm font-bold rounded-lg hover:bg-emerald-500 transition-colors">
+            Upgrade to Pro for Unlimited Access
+          </button>
+        )}
+      </div>
+
+      {/* Recent Activity */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <Cpu className="h-4 w-4 text-emerald-400" />
+            Recent Executions
+          </h3>
+          <button 
+            onClick={loadData}
+            className="text-xs text-slate-500 hover:text-white transition-colors"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {logs.length > 0 ? (
+          <div className="space-y-2">
+            {logs.map((log) => (
+              <div 
+                key={log.id} 
+                className="bg-slate-900/30 rounded-xl p-3 border border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs hover:bg-slate-900/60 transition-all duration-150"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                    log.status === 'success' 
+                      ? 'bg-emerald-500/10 text-emerald-400' 
+                      : 'bg-red-500/10 text-red-400'
+                  }`}>
+                    {log.status}
                   </span>
-                  <span className="text-slate-500">&bull; {item.detail}</span>
+                  <span className="font-semibold text-slate-200 shrink-0 font-mono">
+                    {log.tool_slug}
+                  </span>
+                  <span className="text-slate-500 font-mono">{formatDuration(log.duration_ms)}</span>
+                </div>
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <span className="text-slate-500 font-mono text-[10px]">
+                    {getTimeAgo(log.created_at)}
+                  </span>
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    log.status === 'success' ? 'bg-emerald-400' : 'bg-red-400'
+                  }`} />
                 </div>
               </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        ) : (
+          <div className="bg-slate-900/20 border border-white/5 rounded-xl p-8 text-center">
+            <Cpu className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-400 text-sm">No executions yet</p>
+            <p className="text-slate-500 text-xs mt-1">
+              Create an API key and start using ZeBridge tools to see activity here
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Analytics Graph mockup */}
-      <div className="bg-slate-900/30 border border-white/5 rounded-2xl p-6 backdrop-blur-md">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Weekly Requests Volume</h3>
-          </div>
-          <span className="text-[10px] text-slate-500 font-mono">Last updated: 1m ago</span>
-        </div>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a
+          href="/dashboard/keys"
+          className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 hover:border-emerald-400/40 transition-all group"
+        >
+          <h4 className="text-sm font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">
+            Create API Key
+          </h4>
+          <p className="text-xs text-slate-400">Generate a new key to access ZeBridge</p>
+        </a>
 
-        {/* Custom SVG line chart */}
-        <div className="h-48 w-full relative">
-          <svg className="w-full h-full" viewBox="0 0 600 150" fill="none" preserveAspectRatio="none">
-            {/* Grid Lines */}
-            <line x1="0" y1="30" x2="600" y2="30" stroke="#ffffff" strokeOpacity="0.03" strokeDasharray="4 4" />
-            <line x1="0" y1="75" x2="600" y2="75" stroke="#ffffff" strokeOpacity="0.03" strokeDasharray="4 4" />
-            <line x1="0" y1="120" x2="600" y2="120" stroke="#ffffff" strokeOpacity="0.03" strokeDasharray="4 4" />
+        <a
+          href="/dashboard/tools"
+          className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 hover:border-emerald-400/40 transition-all group"
+        >
+          <h4 className="text-sm font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">
+            Browse Tools
+          </h4>
+          <p className="text-xs text-slate-400">Explore available tools in the registry</p>
+        </a>
 
-            {/* Gradient Fill under line */}
-            <path
-              d="M 0 130 C 100 110, 150 70, 200 80 C 250 90, 300 40, 400 50 C 500 60, 550 20, 600 10 L 600 150 L 0 150 Z"
-              fill="url(#chart-gradient)"
-            />
-
-            {/* SVG Line path */}
-            <path
-              d="M 0 130 C 100 110, 150 70, 200 80 C 250 90, 300 40, 400 50 C 500 60, 550 20, 600 10"
-              stroke="url(#line-gradient)"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-            />
-
-            {/* Gradients */}
-            <defs>
-              <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
-                <stop stopColor="#4ADE80" stopOpacity="0.12" />
-                <stop offset="1" stopColor="#4ADE80" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="line-gradient" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
-                <stop stopColor="#38BDF8" />
-                <stop offset="0.5" stopColor="#4ADE80" />
-                <stop offset="1" stopColor="#38BDF8" />
-              </linearGradient>
-            </defs>
-          </svg>
-
-          {/* Label coordinates overlay */}
-          <div className="absolute inset-x-0 bottom-0 flex justify-between px-1 text-[9px] font-mono text-slate-500">
-            <span>Monday</span>
-            <span>Tuesday</span>
-            <span>Wednesday</span>
-            <span>Thursday</span>
-            <span>Friday</span>
-            <span>Saturday</span>
-            <span>Sunday</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Live Active Stream log list */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <Cpu className="h-4 w-4 text-emerald-400" />
-          Active Execution Stream
-        </h3>
-        <div className="space-y-2">
-          {logs.map((log) => (
-            <div 
-              key={log.id} 
-              className="bg-slate-900/30 rounded-xl p-3 border border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs hover:bg-slate-900/60 transition-all duration-150"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="bg-emerald-500/10 text-emerald-400 font-mono px-2 py-0.5 rounded text-[10px] font-bold shrink-0">
-                  {log.agent}
-                </span>
-                <span className="font-semibold text-slate-200 shrink-0 font-mono">
-                  {log.tool}
-                </span>
-                <span className="text-slate-400 truncate">
-                  {log.details}
-                </span>
-              </div>
-              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                <span className="text-slate-500 font-mono">{log.duration}</span>
-                <span className="text-slate-500 font-mono">{log.time}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <a
+          href="/dashboard/logs"
+          className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 hover:border-emerald-400/40 transition-all group"
+        >
+          <h4 className="text-sm font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">
+            View Audit Logs
+          </h4>
+          <p className="text-xs text-slate-400">Review execution history and security events</p>
+        </a>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
@@ -11,35 +12,50 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const supabase = createClient();
   const [user, setUser] = useState<{ name: string; email: string; plan: string } | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setIsClient(true);
-    const savedUser = localStorage.getItem("zebridge_user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    } else {
-      // Default mock developer session for demo ease
-      const defaultUser = {
-        name: "Dev Mentor",
-        email: "mentor@zeppelinlabs.com",
-        plan: "free"
-      };
-      setUser(defaultUser);
-      localStorage.setItem("zebridge_user", JSON.stringify(defaultUser));
-    }
+    checkUser();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("zebridge_user");
-    router.push("/auth?mode=signin");
-  };
+  async function checkUser() {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    if (!authUser) {
+      router.push('/login');
+      return;
+    }
 
-  if (!isClient) {
+    // Get user data from database
+    const { data: userData } = await supabase
+      .from('users')
+      .select('plan')
+      .eq('id', authUser.id)
+      .single();
+
+    setUser({
+      name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+      email: authUser.email || '',
+      plan: userData?.plan || 'free'
+    });
+    
+    setLoading(false);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push('/');
+  }
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center font-mono text-xs text-slate-500">
-        INITIALIZING SECURE SESSION...
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-400 border-r-transparent mb-4"></div>
+          <p>Loading dashboard...</p>
+        </div>
       </div>
     );
   }
