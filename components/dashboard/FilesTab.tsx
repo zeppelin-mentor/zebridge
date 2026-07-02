@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { FileText, Download, Trash2, Search, RefreshCw, Filter } from "lucide-react";
+import { FileText, Download, Trash2, Search, RefreshCw, Filter, Eye, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface FileItem {
@@ -21,6 +21,8 @@ export default function FilesTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFiles();
@@ -89,6 +91,30 @@ export default function FilesTab() {
     }
   }
 
+  async function handlePreview(file: FileItem) {
+    try {
+      // For public bucket, get public URL
+      const { data } = supabase.storage
+        .from(file.storage_bucket)
+        .getPublicUrl(file.storage_path);
+
+      if (data?.publicUrl) {
+        setPreviewFile(file);
+        setPreviewUrl(data.publicUrl);
+      } else {
+        alert('Preview not available for this file');
+      }
+    } catch (error) {
+      console.error('Error previewing file:', error);
+      alert('Failed to preview file');
+    }
+  }
+
+  function closePreview() {
+    setPreviewFile(null);
+    setPreviewUrl(null);
+  }
+
   async function handleDelete(fileId: string) {
     if (!confirm('Are you sure you want to delete this file?')) return;
 
@@ -141,6 +167,10 @@ export default function FilesTab() {
     return matchesSearch && matchesFilter;
   });
 
+  function isPreviewable(mimeType: string): boolean {
+    return mimeType.includes('image') || mimeType.includes('pdf');
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -151,6 +181,57 @@ export default function FilesTab() {
 
   return (
     <div className="space-y-4">
+      {/* Preview Modal */}
+      {previewFile && previewUrl && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <div>
+                <h3 className="text-lg font-bold text-white">{previewFile.filename}</h3>
+                <p className="text-xs text-slate-400">{formatBytes(previewFile.size)} • {formatDateTime(previewFile.created_at)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownload(previewFile)}
+                  className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                  title="Download"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={closePreview}
+                  className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                  title="Close"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-auto p-4 bg-slate-950/50">
+              {previewFile.mime_type.includes('image') && (
+                <div className="flex items-center justify-center min-h-full">
+                  <img
+                    src={previewUrl}
+                    alt={previewFile.filename}
+                    className="max-w-full max-h-full object-contain rounded-lg"
+                  />
+                </div>
+              )}
+              {previewFile.mime_type.includes('pdf') && (
+                <iframe
+                  src={previewUrl}
+                  className="w-full h-full min-h-[600px] rounded-lg border border-white/5"
+                  title={previewFile.filename}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -264,6 +345,15 @@ export default function FilesTab() {
               <div className="flex items-start justify-between mb-3">
                 <div className="text-3xl">{getFileIcon(file.mime_type)}</div>
                 <div className="flex items-center gap-2">
+                  {isPreviewable(file.mime_type) && (
+                    <button
+                      onClick={() => handlePreview(file)}
+                      className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors"
+                      title="Preview"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDownload(file)}
                     className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"

@@ -9,8 +9,71 @@ import Pricing from "@/components/landing/Pricing";
 import Footer from "@/components/landing/Footer";
 
 export default function Home() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'ZeBridge',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Web',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+    description: 'Universal tooling platform for AI agents. Connect Claude, Cursor, Windsurf, and Gemini to secure, real-world tools via Model Context Protocol (MCP)',
+    creator: {
+      '@type': 'Organization',
+      name: 'Zeppelin Labs',
+      url: 'https://zeppelinlabs.digital',
+      email: 'team@zeppelinlabs.digital',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '5.0',
+      ratingCount: '1',
+    },
+    featureList: [
+      'Model Context Protocol (MCP) Server',
+      'REST API Endpoints',
+      'PDF Manipulation Tools',
+      'Image Processing',
+      'Document Generation',
+      'QR Code Generator',
+      'OCR Text Extraction',
+      'Secure API Key Authentication',
+    ],
+  }
+
+  const orgJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Zeppelin Labs',
+    url: 'https://zeppelinlabs.digital',
+    logo: 'https://zebridge.vercel.app/logo.png',
+    email: 'team@zeppelinlabs.digital',
+    sameAs: [
+      'https://zebridge.vercel.app',
+    ],
+    founder: {
+      '@type': 'Person',
+      name: 'Zeppelin Labs Team',
+    },
+    description: 'Building tools that connect AI agents to the real world',
+  }
+
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#0B0F19] text-white">
+    <>
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+      
+      <div className="relative min-h-screen flex flex-col bg-[#0B0F19] text-white">
       {/* Promo banner at absolute top */}
       <PromoBanner />
 
@@ -35,5 +98,6 @@ export default function Home() {
       {/* Footer metadata details */}
       <Footer />
     </div>
+    </>
   );
 }

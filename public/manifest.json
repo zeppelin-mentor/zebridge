@@ -1,0 +1,42 @@
+{
+  "name": "ZeBridge - Universal Tooling for AI Agents",
+  "short_name": "ZeBridge",
+  "description": "Connect AI agents to secure, real-world tools via Model Context Protocol",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F19",
+  "theme_color": "#4ADE80",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["developer", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Access your dashboard"
+    },
+    {
+      "name": "Tools",
+      "url": "/dashboard/tools",
+      "description": "Browse available tools"
+    },
+    {
+      "name": "API Keys",
+      "url": "/dashboard/keys",
+      "description": "Manage API keys"
+    }
+  ]
+}

@@ -4,9 +4,9 @@
       "url": "https://mcp.supabase.com/mcp?project_ref=duhruaqxuvwvyphyuold"
     },
     "zebridge": {
-      "url": "http://localhost:3000/mcp",
+      "url": "https://zebridge.vercel.app/mcp",
       "headers": {
-        "Authorization": "Bearer zbr_5e5bac25c7e3abacbfbd4de3c049153a8fa12f0c7ac11cd0f23146f76f40593c"
+        "Authorization": "Bearer zbr_473084af971160279cafdf9f54c8cb25290821ec7a8cf2ea7f7e82a0b21df5cb"
       },
       "disabled": false
     }
