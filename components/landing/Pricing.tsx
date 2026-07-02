@@ -33,7 +33,7 @@ export default function Pricing() {
         "Email support response under 2h",
       ],
       cta: "Upgrade to Pro",
-      href: "/auth?mode=signup&plan=pro",
+      href: "/signup",
       popular: true,
     },
     {
@@ -50,7 +50,7 @@ export default function Pricing() {
         "Collaborative API key rolls",
       ],
       cta: "Start Free Trial",
-      href: "/auth?mode=signup&plan=team",
+      href: "/signup",
       popular: false,
     },
     {

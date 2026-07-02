@@ -21,6 +21,14 @@ export default function SignUp() {
     setError('')
     setSuccess(false)
 
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address')
+      setLoading(false)
+      return
+    }
+
     // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -29,30 +37,70 @@ export default function SignUp() {
     }
 
     // Validate password strength
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
       setLoading(false)
       return
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-      },
-    })
+    if (!/[A-Z]/.test(password)) {
+      setError('Password must contain at least one uppercase letter')
+      setLoading(false)
+      return
+    }
 
-    if (error) {
-      setError(error.message)
+    if (!/[a-z]/.test(password)) {
+      setError('Password must contain at least one lowercase letter')
       setLoading(false)
-    } else {
-      setSuccess(true)
+      return
+    }
+
+    if (!/[0-9]/.test(password)) {
+      setError('Password must contain at least one number')
       setLoading(false)
-      // Auto redirect after 3 seconds
-      setTimeout(() => {
-        router.push('/login')
-      }, 3000)
+      return
+    }
+
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+          data: {
+            email: email,
+          }
+        },
+      })
+
+      if (signUpError) {
+        setError(signUpError.message)
+        setLoading(false)
+        return
+      }
+
+      // Check if email confirmation is required
+      if (data?.user && !data.session) {
+        // Email confirmation required
+        setSuccess(true)
+        setLoading(false)
+        
+        // Redirect to login after showing success message
+        setTimeout(() => {
+          router.push('/login?message=Please check your email to confirm your account')
+        }, 3000)
+      } else if (data?.session) {
+        // Auto-confirmed, redirect to dashboard immediately
+        setSuccess(true)
+        setLoading(false)
+        
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 1500)
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
+      setLoading(false)
     }
   }
 
@@ -78,7 +126,7 @@ export default function SignUp() {
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Account Created!</h3>
               <p className="text-gray-400 mb-4">
-                Please check your email to verify your account.
+                Please check your email to verify your account before signing in.
               </p>
               <p className="text-sm text-gray-500">
                 Redirecting to login...
@@ -104,6 +152,7 @@ export default function SignUp() {
                   required
                   className="w-full px-4 py-3 bg-[#0B0F19] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#4ADE80] transition"
                   placeholder="you@example.com"
+                  disabled={loading}
                 />
               </div>
 
@@ -117,13 +166,25 @@ export default function SignUp() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={8}
                   className="w-full px-4 py-3 bg-[#0B0F19] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#4ADE80] transition"
-                  placeholder="At least 6 characters"
+                  placeholder="Create a strong password"
+                  disabled={loading}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Must be at least 6 characters long
-                </p>
+                <div className="mt-2 space-y-1">
+                  <p className={`text-xs ${password.length >= 8 ? 'text-green-500' : 'text-gray-500'}`}>
+                    ✓ At least 8 characters
+                  </p>
+                  <p className={`text-xs ${/[A-Z]/.test(password) ? 'text-green-500' : 'text-gray-500'}`}>
+                    ✓ One uppercase letter
+                  </p>
+                  <p className={`text-xs ${/[a-z]/.test(password) ? 'text-green-500' : 'text-gray-500'}`}>
+                    ✓ One lowercase letter
+                  </p>
+                  <p className={`text-xs ${/[0-9]/.test(password) ? 'text-green-500' : 'text-gray-500'}`}>
+                    ✓ One number
+                  </p>
+                </div>
               </div>
 
               <div>
@@ -138,7 +199,13 @@ export default function SignUp() {
                   required
                   className="w-full px-4 py-3 bg-[#0B0F19] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#4ADE80] transition"
                   placeholder="Re-enter your password"
+                  disabled={loading}
                 />
+                {confirmPassword && (
+                  <p className={`mt-1 text-xs ${password === confirmPassword ? 'text-green-500' : 'text-red-500'}`}>
+                    {password === confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                  </p>
+                )}
               </div>
 
               <button
@@ -146,7 +213,17 @@ export default function SignUp() {
                 disabled={loading}
                 className="w-full px-6 py-3 bg-[#4ADE80] text-black font-medium rounded-lg hover:bg-[#4ADE80]/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    Creating Account...
+                  </span>
+                ) : (
+                  'Create Account'
+                )}
               </button>
             </form>
           )}
@@ -155,11 +232,11 @@ export default function SignUp() {
             <div className="mt-6 text-center">
               <p className="text-gray-400 text-sm">
                 Already have an account?{' '}
-                <Link href="/login" className="text-[#4ADE80] hover:underline">
+                <Link href="/login" className="text-[#4ADE80] hover:underline font-medium">
                   Sign in
                 </Link>
               </p>
-              <Link href="/" className="block mt-3 text-[#4ADE80] hover:underline text-sm">
+              <Link href="/" className="block mt-3 text-gray-500 hover:text-[#4ADE80] text-sm transition-colors">
                 ← Back to home
               </Link>
             </div>
