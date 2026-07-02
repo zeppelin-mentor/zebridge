@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createMCPServer } from '@/lib/mcp/server'
-import { registerTools } from '@/lib/mcp/tools/registry'
-import { pdfTools } from '@/lib/mcp/tools/pdf-tools'
-import { imageTools } from '@/lib/mcp/tools/image-tools'
-import { aiTools } from '@/lib/mcp/tools/ai-tools'
 import { validateApiKey } from '@/lib/auth/api-key'
 import { checkRateLimit } from '@/lib/auth/rate-limit'
 
-// Create MCP server instance
+// Create MCP server instance (tools are already registered in createMCPServer)
 const mcpServer = createMCPServer()
-
-// Register all tools
-registerTools(mcpServer, [...pdfTools, ...imageTools, ...aiTools])
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +34,33 @@ export async function POST(request: NextRequest) {
     // Full MCP implementation requires StreamableHTTPServerTransport
     return NextResponse.json({
       message: 'MCP server endpoint',
-      tools: ['pdf_merge', 'pdf_split', 'pdf_to_word', 'remove_background', 'image_upscale', 'image_compress', 'generate_qrcode', 'ocr_extract_text', 'generate_invoice'],
+      version: '1.0.0',
+      tools: [
+        // PDF tools (4)
+        'pdf_merge',
+        'pdf_split',
+        'pdf_to_word',
+        'markdown_to_pdf',
+        'html_to_pdf',
+        // Image tools (2)
+        'remove_background',
+        'image_upscale',
+        // Document tools (3)
+        'text_to_docx',
+        'json_to_excel',
+        'generate_receipt',
+        // AI tools (3)
+        'generate_qrcode',
+        'ocr_extract_text',
+        'generate_invoice',
+      ],
+      totalTools: 12,
+      endpoints: {
+        pdf: ['/v1/tools/pdf-merge', '/v1/tools/pdf-split', '/v1/tools/markdown-to-pdf', '/v1/tools/html-to-pdf'],
+        images: ['/v1/tools/remove-background', '/v1/tools/image-upscale'],
+        office: ['/v1/tools/text-to-docx', '/v1/tools/json-to-excel', '/v1/tools/generate-receipt'],
+        ai: ['/v1/tools/generate-qrcode', '/v1/tools/ocr-extract-text', '/v1/tools/generate-invoice'],
+      },
     })
 
   } catch (error) {

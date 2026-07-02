@@ -61,21 +61,25 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#0B0F19] text-white">
-      {/* Dashboard Sidebar Navigation */}
+    <div className="min-h-screen bg-[#0B0F19] text-white">
+      {/* Dashboard Sidebar Navigation - Fixed */}
       <DashboardSidebar 
         user={user} 
         onLogout={handleLogout} 
       />
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Workspace Sub-header */}
-        <DashboardHeader />
+      {/* Main Workspace Area - With left margin for fixed sidebar */}
+      <div className="md:ml-64">
+        {/* Workspace Sub-header - Fixed at top */}
+        <div className="sticky top-0 z-10">
+          <DashboardHeader />
+        </div>
 
-        {/* Dynamic Workspace Container */}
-        <main className="flex-1 p-6 overflow-y-auto max-w-7xl w-full mx-auto animate-fade-in">
-          {children}
+        {/* Dynamic Workspace Container - Scrollable */}
+        <main className="p-6 min-h-screen">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

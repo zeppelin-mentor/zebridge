@@ -32,8 +32,8 @@ export default function DashboardSidebar({ user, onLogout }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-full md:w-64 bg-[#070A11] border-r border-white/5 flex flex-col justify-between shrink-0 p-4 font-sans text-slate-400">
-      <div className="space-y-6">
+    <aside className="w-full md:w-64 bg-[#070A11] border-r border-white/5 flex flex-col shrink-0 font-sans text-slate-400 md:fixed md:left-0 md:top-0 md:h-screen overflow-hidden z-20">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
         {/* Header Logo */}
         <div className="flex items-center justify-between px-2 pt-2">
           <Link href="/">
@@ -46,16 +46,6 @@ export default function DashboardSidebar({ user, onLogout }: SidebarProps) {
             <ArrowLeft className="h-3 w-3" />
             Home
           </Link>
-        </div>
-
-        {/* Kiro IDE Badge */}
-        <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 rounded-xl p-3 border border-emerald-500/20">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Connected Agent</span>
-          </div>
-          <p className="text-xs font-semibold text-white">Kiro IDE</p>
-          <p className="text-[10px] text-slate-500 mt-0.5">AI Development Assistant</p>
         </div>
 
         {/* MCP Status Indicator */}
@@ -90,8 +80,8 @@ export default function DashboardSidebar({ user, onLogout }: SidebarProps) {
         </nav>
       </div>
 
-      {/* User Footer Profile */}
-      <div className="pt-4 border-t border-white/5 space-y-3">
+      {/* User Footer Profile - Fixed at bottom */}
+      <div className="p-4 pt-4 border-t border-white/5 space-y-3 shrink-0">
         <Link
           href="/dashboard/profile"
           className={`flex items-center gap-3 px-2 hover:bg-white/5 rounded-xl py-2 transition-colors ${

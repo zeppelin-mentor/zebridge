@@ -159,6 +159,7 @@ export default function ApiKeysTab() {
       {/* Generate form */}
       <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">Create New Secret Key</h3>
+        <p className="text-[11px] text-slate-400 mb-3">Give your API key a descriptive name to identify where it's used.</p>
         <form onSubmit={handleCreateKey} className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
@@ -166,16 +167,23 @@ export default function ApiKeysTab() {
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             className="flex-1 bg-slate-950/80 border border-white/5 focus:border-emerald-400/40 rounded-xl px-4 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none transition-colors"
+            maxLength={100}
           />
           <button
             type="submit"
             disabled={!newKeyName.trim()}
             className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white hover:bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-950 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!newKeyName.trim() ? "Enter a name for your API key" : "Create API key"}
           >
             <Plus className="h-4 w-4" />
             Generate Secret Key
           </button>
         </form>
+        {!newKeyName.trim() && (
+          <p className="text-[10px] text-slate-500 mt-2">
+            ℹ️ Button will enable after you enter a key name
+          </p>
+        )}
       </div>
 
       {/* Newly Created Key Alert Box */}

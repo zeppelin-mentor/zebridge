@@ -18,7 +18,7 @@ import {
 interface ToolItem {
   name: string;
   slug: string;
-  category: "PDF" | "Images" | "Office" | "AI" | "Utilities";
+  category: "PDF" | "Images" | "Office" | "AI";
   desc: string;
   premium: boolean;
 }
@@ -38,26 +38,27 @@ export default function ToolsTab() {
 
   const toolsList: ToolItem[] = [
     // PDF
-    { name: "Merge PDFs", slug: "Merge_PDFs", category: "PDF", desc: "Combines multiple PDF documents into a single consolidated file.", premium: false },
-    { name: "Split PDF", slug: "Split_PDF", category: "PDF", desc: "Splits pages from a PDF document into separate page extracts.", premium: false },
-    { name: "Compress PDF", slug: "Compress_PDF", category: "PDF", desc: "Minimizes file size of PDFs while optimizing visual layout dpi.", premium: true },
-    { name: "PDF to Word (DOCX)", slug: "PDF_to_Word", category: "PDF", desc: "Converts structural layout pages into editable DOCX templates.", premium: true },
+    { name: "Merge PDFs", slug: "pdf-merge", category: "PDF", desc: "Combines multiple PDF documents into a single consolidated file.", premium: false },
+    { name: "Split PDF", slug: "pdf-split", category: "PDF", desc: "Splits pages from a PDF document into separate page extracts.", premium: false },
+    { name: "Markdown to PDF", slug: "markdown-to-pdf", category: "PDF", desc: "Converts Markdown formatted text into professional PDF documents.", premium: false },
+    { name: "HTML to PDF", slug: "html-to-pdf", category: "PDF", desc: "Converts HTML content into formatted PDF documents.", premium: false },
     
     // Images
-    { name: "Background Removal", slug: "Image_Background_Remove", category: "Images", desc: "Removes background alpha mask from images using high-fidelity segmentation.", premium: true },
-    { name: "Image Compressor", slug: "Compress_Images", category: "Images", desc: "Optimizes PNG, JPEG, and WebP compression factors without structural artifacts.", premium: false },
-    { name: "Image Upscaling", slug: "Upscale_Image", category: "Images", desc: "Doubles visual dimensions of inputs using super-resolution neural rendering.", premium: true },
+    { name: "Background Removal", slug: "remove-background", category: "Images", desc: "Removes background alpha mask from images using high-fidelity segmentation.", premium: true },
+    { name: "Image Upscaling", slug: "image-upscale", category: "Images", desc: "Doubles visual dimensions of inputs using super-resolution neural rendering.", premium: true },
+    
+    // Office Documents
+    { name: "Text to DOCX", slug: "text-to-docx", category: "Office", desc: "Converts plain text content into formatted Microsoft Word documents.", premium: false },
+    { name: "JSON to Excel", slug: "json-to-excel", category: "Office", desc: "Converts JSON data arrays into Excel spreadsheet format (CSV).", premium: false },
+    { name: "Generate Receipt", slug: "generate-receipt", category: "Office", desc: "Creates professional receipt PDFs with itemized billing details.", premium: false },
     
     // AI
-    { name: "Invoice OCR Parser", slug: "Invoice_OCR", category: "AI", desc: "Parses business invoice PDFs to output standardized transaction JSON structures.", premium: true },
-    { name: "Document Summarizer", slug: "Summarize_Docs", category: "AI", desc: "Distills text content from documents into readable bullets and abstracts.", premium: false },
-    
-    // Utilities
-    { name: "QR Code Generator", slug: "QR_Generator", category: "Utilities", desc: "Instantly outputs high-resolution QR codes from arbitrary URI links.", premium: false },
-    { name: "UUID Generator", slug: "UUID_Generator", category: "Utilities", desc: "Bulk outputs cryptographically random version-4 UUID strings.", premium: false }
+    { name: "Invoice Generator", slug: "generate-invoice", category: "AI", desc: "Creates professional invoices with automated calculations and formatting.", premium: true },
+    { name: "OCR Extract Text", slug: "ocr-extract-text", category: "AI", desc: "Extracts text content from images using optical character recognition.", premium: true },
+    { name: "QR Code Generator", slug: "generate-qrcode", category: "AI", desc: "Generates high-resolution QR codes from text or URL inputs.", premium: false }
   ];
 
-  const categories = ["All", "PDF", "Images", "AI", "Utilities"];
+  const categories = ["All", "PDF", "Images", "Office", "AI"];
 
   const filteredTools = toolsList.filter(tool => {
     const matchesSearch = tool.name.toLowerCase().includes(search.toLowerCase()) || 
