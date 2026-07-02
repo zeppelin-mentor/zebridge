@@ -19,11 +19,31 @@ export default function AgentsTab() {
 
   const agents: AgentItem[] = [
     {
+      name: "Kiro IDE",
+      slug: "kiro-ide",
+      status: "Active",
+      requests: "0",
+      lastSeen: "Just now",
+      latency: "12ms",
+      configType: "json",
+      configBlock: `{
+  "mcpServers": {
+    "zebridge": {
+      "type": "sse",
+      "url": "https://zebridge.io/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}`
+    },
+    {
       name: "Claude Code",
       slug: "claude-code",
       status: "Active",
-      requests: "1,249",
-      lastSeen: "Just now",
+      requests: "0",
+      lastSeen: "Not connected",
       latency: "14ms",
       configType: "json",
       configBlock: `{
@@ -32,7 +52,7 @@ export default function AgentsTab() {
       "type": "sse",
       "url": "https://zebridge.io/mcp",
       "headers": {
-        "Authorization": "Bearer zb_prod_8f3a1d9e2c4b..."
+        "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
     }
   }
@@ -41,19 +61,19 @@ export default function AgentsTab() {
     {
       name: "Cursor IDE",
       slug: "cursor",
-      status: "Active",
-      requests: "2,094",
-      lastSeen: "3m ago",
+      status: "Inactive",
+      requests: "0",
+      lastSeen: "Not connected",
       latency: "19ms",
       configType: "url",
-      configBlock: "https://zebridge.io/mcp?key=zb_prod_8f3a1d9e2c4b..."
+      configBlock: "https://zebridge.io/mcp?key=YOUR_API_KEY_HERE"
     },
     {
       name: "Windsurf",
       slug: "windsurf",
-      status: "Active",
-      requests: "938",
-      lastSeen: "10m ago",
+      status: "Inactive",
+      requests: "0",
+      lastSeen: "Not connected",
       latency: "22ms",
       configType: "json",
       configBlock: `{
@@ -62,7 +82,7 @@ export default function AgentsTab() {
       "type": "sse",
       "url": "https://zebridge.io/mcp",
       "headers": {
-        "Authorization": "Bearer zb_prod_8f3a1d9e2c4b..."
+        "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
     }
   }
@@ -81,9 +101,15 @@ export default function AgentsTab() {
       {/* Configuration Header info */}
       <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">Connecting Your Local Agents</h3>
-        <p className="text-xs text-slate-400 leading-relaxed">
+        <p className="text-xs text-slate-400 leading-relaxed mb-3">
           ZeBridge acts as a Model Context Protocol (MCP) server that runs locally or in the cloud. By configuring your editor's MCP settings, your AI assistant gets native capabilities to invoke all the tools registered in your account.
         </p>
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-2">
+          <span className="text-amber-400 text-xs font-bold shrink-0">⚠️</span>
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            Replace <code className="bg-slate-950 px-1 py-0.5 rounded text-amber-400">YOUR_API_KEY_HERE</code> with your actual API key from the API Keys tab before using these configurations.
+          </p>
+        </div>
       </div>
 
       {/* Agents List Grid */}
