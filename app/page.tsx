@@ -4,9 +4,12 @@ import Header from "@/components/landing/Header";
 import Hero from "@/components/landing/Hero";
 import IntegrationBanner from "@/components/landing/IntegrationBanner";
 import AppPreview from "@/components/landing/AppPreview";
+import HowItWorks from "@/components/landing/HowItWorks";
+import ToolsCatalog from "@/components/landing/ToolsCatalog";
 import Features from "@/components/landing/Features";
 import Pricing from "@/components/landing/Pricing";
 import BlogSection from "@/components/landing/BlogSection";
+import BottomCta from "@/components/landing/BottomCta";
 import Footer from "@/components/landing/Footer";
 
 export default function Home() {
@@ -90,6 +93,12 @@ export default function Home() {
       {/* Trust banner listing supported AI clients */}
       <IntegrationBanner />
 
+      {/* Platform Workflow explaining ZeBridge */}
+      <HowItWorks />
+
+      {/* Implemented Tools Catalog */}
+      <ToolsCatalog />
+
       {/* Features details (MCP, REST API, Sandbox environment) */}
       <Features />
 
@@ -98,6 +107,9 @@ export default function Home() {
 
       {/* Latest blog posts */}
       <BlogSection />
+
+      {/* Onboarding bottom CTA banner */}
+      <BottomCta />
 
       {/* Footer metadata details */}
       <Footer />

@@ -30,7 +30,7 @@ export default function Header() {
             <Link href="/blog" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
               Blog
             </Link>
-            <Link href="#docs" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
+            <Link href="/docs" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
               Documentation
             </Link>
             <Link href="#pricing" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150">
@@ -47,7 +47,7 @@ export default function Header() {
               Sign In
             </Link>
             <Link 
-              href="/login" 
+              href="/signup" 
               className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-100 transition-colors duration-150"
             >
               Get Started
@@ -92,7 +92,7 @@ export default function Header() {
               Blog
             </Link>
             <Link
-              href="#docs"
+              href="/docs"
               onClick={() => setIsOpen(false)}
               className="block rounded-md px-3 py-2 text-base font-medium text-slate-300 hover:bg-slate-900 hover:text-white"
             >
@@ -122,7 +122,7 @@ export default function Header() {
                 Sign In
               </Link>
               <Link
-                href="/login"
+                href="/signup"
                 onClick={() => setIsOpen(false)}
                 className="text-center rounded-md bg-white py-2 text-base font-semibold text-slate-900 hover:bg-slate-100"
               >

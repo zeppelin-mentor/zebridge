@@ -16,7 +16,7 @@ export default function Pricing() {
         "Shared queue routing",
       ],
       cta: "Get Started",
-      href: "/dashboard",
+      href: "/signup",
       popular: false,
     },
     {

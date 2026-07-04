@@ -44,7 +44,7 @@ export default function Hero() {
             {/* Call-to-actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <Link
-                href="/dashboard"
+                href="/signup"
                 className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 hover:bg-slate-100 shadow-[0_4px_20px_rgba(255,255,255,0.15)] transition-all duration-200"
               >
                 Get Started Free
@@ -52,7 +52,7 @@ export default function Hero() {
               </Link>
               
               <Link
-                href="#docs"
+                href="/docs"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-200"
               >
                 <Play className="h-4 w-4 text-slate-300" />

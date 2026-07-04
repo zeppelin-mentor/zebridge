@@ -6,7 +6,7 @@ export default function PromoBanner() {
       <div className="flex items-center justify-center gap-2">
         <span>🎁 Secure your AI agents — Try ZeBridge free today</span>
         <a 
-          href="/dashboard" 
+          href="/signup" 
           className="inline-flex items-center gap-1 font-semibold underline hover:text-emerald-200 transition-colors"
         >
           Get Started
