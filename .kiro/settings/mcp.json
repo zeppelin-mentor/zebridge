@@ -6,7 +6,7 @@
     "zebridge": {
       "url": "https://zebridge.vercel.app/mcp",
       "headers": {
-        "Authorization": "Bearer zbr_473084af971160279cafdf9f54c8cb25290821ec7a8cf2ea7f7e82a0b21df5cb"
+        "Authorization": "Bearer zbr_5e9f46761448330368c848d203405467636e4411f6eae9997b341764e87a29a5"
       },
       "disabled": false
     }

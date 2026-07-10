@@ -97,3 +97,26 @@ DROP POLICY IF EXISTS "Users can manage own API keys" ON public.api_keys;
 CREATE POLICY "Users can manage own API keys" 
 ON public.api_keys FOR ALL USING (auth.uid() = user_id);
 
+-- ============================================
+-- TABLE: user_tool_preferences
+-- Controls which tools each user has enabled.
+-- Default: tool is enabled if no row exists.
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.user_tool_preferences (
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  tool_slug TEXT NOT NULL,
+  enabled BOOLEAN DEFAULT true,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (user_id, tool_slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tool_prefs_user_id ON public.user_tool_preferences(user_id);
+
+ALTER TABLE public.user_tool_preferences ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users manage own tool prefs" ON public.user_tool_preferences;
+CREATE POLICY "Users manage own tool prefs"
+ON public.user_tool_preferences FOR ALL USING (auth.uid() = user_id);
+
+COMMIT;

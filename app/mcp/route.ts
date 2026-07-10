@@ -64,9 +64,18 @@ export async function POST(request: NextRequest) {
           headers: { 'MCP-Session-Id': sessionId },
         })
 
-      case 'tools/list':
-        result = {
-          tools: [
+      case 'tools/list': {
+        // Fetch user tool preferences
+        const supabasePrefs = createServiceClient()
+        const { data: prefs } = await supabasePrefs
+          .from('user_tool_preferences')
+          .select('tool_slug, enabled')
+          .eq('user_id', authContext.userId)
+        const disabledSlugs = new Set(
+          (prefs || []).filter(p => !p.enabled).map(p => p.tool_slug.replace(/-/g, '_'))
+        )
+
+        const allTools = [
             {
               name: 'pdf_merge',
               description: 'Merge multiple PDF files into one',
@@ -219,9 +228,55 @@ export async function POST(request: NextRequest) {
                 required: ['imageUrl'],
               },
             },
-          ],
+            // Office reverse operations
+            {
+              name: 'docx_to_markdown',
+              description: 'Convert DOCX Word document to Markdown',
+              inputSchema: { type: 'object', properties: { docxUrl: { type: 'string' }, includeHeadings: { type: 'boolean' } }, required: ['docxUrl'] },
+            },
+            {
+              name: 'csv_to_json',
+              description: 'Convert CSV text to JSON array',
+              inputSchema: { type: 'object', properties: { csv: { type: 'string' }, delimiter: { type: 'string' } }, required: ['csv'] },
+            },
+            {
+              name: 'excel_to_json',
+              description: 'Fetch CSV/Excel file from URL and convert to JSON',
+              inputSchema: { type: 'object', properties: { fileUrl: { type: 'string' }, delimiter: { type: 'string' } }, required: ['fileUrl'] },
+            },
+            {
+              name: 'docx_template_filler',
+              description: 'Fill variable placeholders in a DOCX template',
+              inputSchema: { type: 'object', properties: { templateUrl: { type: 'string' }, variables: { type: 'object' } }, required: ['templateUrl', 'variables'] },
+            },
+            {
+              name: 'generate_pptx',
+              description: 'Generate a PowerPoint presentation',
+              inputSchema: { type: 'object', properties: { presentationTitle: { type: 'string' }, slides: { type: 'array' }, theme: { type: 'string', enum: ['dark', 'light', 'corporate'] } }, required: ['presentationTitle', 'slides'] },
+            },
+            // Communication & Notifications
+            {
+              name: 'send_email',
+              description: 'Send an email via SMTP with QStash reliable delivery',
+              inputSchema: { type: 'object', properties: { to: { type: 'string' }, subject: { type: 'string' }, body: { type: 'string' }, from: { type: 'string' }, isHtml: { type: 'boolean' } }, required: ['to', 'subject', 'body'] },
+            },
+            {
+              name: 'send_webhook',
+              description: 'Send a message to Slack, Discord, or any webhook URL',
+              inputSchema: { type: 'object', properties: { webhookUrl: { type: 'string' }, message: { type: 'string' }, username: { type: 'string' }, platform: { type: 'string', enum: ['slack', 'discord', 'generic'] } }, required: ['webhookUrl', 'message'] },
+            },
+            {
+              name: 'generate_email_template',
+              description: 'Generate a styled HTML email template',
+              inputSchema: { type: 'object', properties: { subject: { type: 'string' }, heading: { type: 'string' }, body: { type: 'string' }, ctaText: { type: 'string' }, ctaUrl: { type: 'string' }, primaryColor: { type: 'string' } }, required: ['subject', 'heading', 'body'] },
+            },
+          ]
+
+        result = {
+          tools: allTools.filter(t => !disabledSlugs.has(t.name)),
         }
         break
+      }
 
       case 'tools/call':
         const toolName = params?.name

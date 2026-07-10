@@ -384,3 +384,172 @@ export async function jsonToExcel(
     filename
   }
 }
+
+// ─── DOCX to Markdown ────────────────────────────────────────────────────────
+export async function docxToMarkdown(
+  input: { docxUrl: string; includeHeadings?: boolean },
+  userId: string,
+  executionId: string
+): Promise<{ outputUrl: string; filename: string; markdown: string }> {
+  const PizZip = (await import('pizzip')).default
+  const { downloadFile } = await import('@/lib/storage/upload')
+
+  const docxBuffer = await downloadFile(input.docxUrl)
+  const zip = new PizZip(docxBuffer)
+
+  // Extract word/document.xml
+  const documentXml = zip.file('word/document.xml')
+  if (!documentXml) throw new Error('Invalid DOCX: word/document.xml not found')
+
+  const xmlContent = documentXml.asText()
+
+  // Parse XML into markdown lines
+  const lines: string[] = []
+  const paragraphRegex = /<w:p[ >]([\s\S]*?)<\/w:p>/g
+  let paraMatch: RegExpExecArray | null
+
+  while ((paraMatch = paragraphRegex.exec(xmlContent)) !== null) {
+    const paraXml = paraMatch[1]
+
+    // Detect heading style
+    const styleMatch = paraXml.match(/<w:pStyle w:val="([^"]+)"/)
+    const style = styleMatch ? styleMatch[1].toLowerCase() : ''
+
+    // Extract all text runs
+    const textRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g
+    let textMatch: RegExpExecArray | null
+    let lineText = ''
+    while ((textMatch = textRegex.exec(paraXml)) !== null) {
+      lineText += textMatch[1]
+    }
+
+    if (!lineText.trim()) {
+      lines.push('')
+      continue
+    }
+
+    // Map heading styles
+    if (style.includes('heading1') || style === 'title') {
+      lines.push(`# ${lineText}`)
+    } else if (style.includes('heading2')) {
+      lines.push(`## ${lineText}`)
+    } else if (style.includes('heading3')) {
+      lines.push(`### ${lineText}`)
+    } else {
+      lines.push(lineText)
+    }
+  }
+
+  const markdown = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  const filename = `converted-${Date.now()}.md`
+
+  const result = await uploadFile(
+    userId,
+    executionId,
+    Buffer.from(markdown, 'utf-8'),
+    filename,
+    'text/markdown',
+    'outputs'
+  )
+
+  return { outputUrl: result.publicUrl, filename, markdown }
+}
+
+// ─── CSV to JSON ─────────────────────────────────────────────────────────────
+export async function csvToJson(
+  input: { csv: string; delimiter?: string },
+  userId: string,
+  executionId: string
+): Promise<{ outputUrl: string; filename: string; data: Record<string, string>[]; rowCount: number }> {
+  const { csv, delimiter = ',' } = input
+
+  const lines = csv.trim().split('\n').filter(l => l.trim())
+  if (lines.length < 2) throw new Error('CSV must have a header row and at least one data row')
+
+  const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''))
+
+  const data: Record<string, string>[] = lines.slice(1).map(line => {
+    // Handle quoted values
+    const values: string[] = []
+    let current = ''
+    let inQuotes = false
+    for (const char of line) {
+      if (char === '"') {
+        inQuotes = !inQuotes
+      } else if (char === delimiter && !inQuotes) {
+        values.push(current.trim())
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    values.push(current.trim())
+
+    return headers.reduce((obj, header, i) => {
+      obj[header] = values[i] ?? ''
+      return obj
+    }, {} as Record<string, string>)
+  })
+
+  const json = JSON.stringify(data, null, 2)
+  const filename = `csv-to-json-${Date.now()}.json`
+
+  const result = await uploadFile(
+    userId,
+    executionId,
+    Buffer.from(json),
+    filename,
+    'application/json',
+    'outputs'
+  )
+
+  return { outputUrl: result.publicUrl, filename, data, rowCount: data.length }
+}
+
+// ─── Excel / CSV URL to JSON ──────────────────────────────────────────────────
+export async function excelToJson(
+  input: { fileUrl: string; delimiter?: string },
+  userId: string,
+  executionId: string
+): Promise<{ outputUrl: string; filename: string; data: Record<string, string>[]; rowCount: number }> {
+  const { downloadFile } = await import('@/lib/storage/upload')
+  const fileBuffer = await downloadFile(input.fileUrl)
+  const csvText = fileBuffer.toString('utf-8')
+  return csvToJson({ csv: csvText, delimiter: input.delimiter }, userId, executionId)
+}
+
+// ─── DOCX Template Filler ────────────────────────────────────────────────────
+export async function docxTemplateFiller(
+  input: { templateUrl: string; variables: Record<string, string> },
+  userId: string,
+  executionId: string
+): Promise<{ outputUrl: string; filename: string }> {
+  const PizZip = (await import('pizzip')).default
+  const Docxtemplater = (await import('docxtemplater')).default
+  const { downloadFile } = await import('@/lib/storage/upload')
+
+  const templateBuffer = await downloadFile(input.templateUrl)
+  const zip = new PizZip(templateBuffer)
+
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+  })
+
+  doc.render(input.variables)
+
+  const outputBuffer = doc.getZip().generate({ type: 'nodebuffer' }) as Buffer
+  const filename = `filled-template-${Date.now()}.docx`
+
+  const result = await uploadFile(
+    userId,
+    executionId,
+    outputBuffer,
+    filename,
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'outputs'
+  )
+
+  return { outputUrl: result.publicUrl, filename }
+}
+

@@ -4,6 +4,8 @@ import { pdfTools } from './pdf-tools'
 import { imageTools } from './image-tools'
 import { documentTools } from './document-tools'
 import { aiTools } from './ai-tools'
+import { communicationTools } from './communication-tools'
+import { officeTools } from './office-tools'
 
 // Export all tools as a flat array
 export const toolRegistry: ToolDefinition[] = [
@@ -11,6 +13,8 @@ export const toolRegistry: ToolDefinition[] = [
   ...imageTools,
   ...documentTools,
   ...aiTools,
+  ...communicationTools,
+  ...officeTools,
 ]
 
 export function registerTools(server: McpServer, tools: ToolDefinition[]) {

@@ -1,0 +1,109 @@
+{
+  "projectInformation": {
+    "name": "ZeBridge",
+    "description": "Universal Tooling for AI Agents",
+    "version": "0.1.0",
+    "organization": "Zeppelin Labs",
+    "email": "team@zeppelinlabs.digital",
+    "website": "https://zeppelinlabs.digital"
+  },
+  "technicalStack": {
+    "framework": "Next.js 16.2.9",
+    "react": "19.2.4",
+    "typescript": "5.x",
+    "styling": "Tailwind CSS 4",
+    "runtime": "Node.js"
+  },
+  "backendServices": {
+    "authentication": "Supabase",
+    "database": "Supabase",
+    "queueSystem": "Upstash QStash",
+    "email": "Nodemailer",
+    "mcpIntegration": "@modelcontextprotocol/sdk"
+  },
+  "features": {
+    "pdfTools": 3,
+    "imageTools": 3,
+    "documentGeneration": 5,
+    "dataConversion": 3,
+    "utilities": 3,
+    "totalTools": 22
+  },
+  "toolsList": [
+    "PDF Merge",
+    "PDF Split",
+    "PDF to DOCX",
+    "Remove Background",
+    "Image Upscale",
+    "OCR Extract Text",
+    "Text to DOCX",
+    "Markdown to PDF",
+    "HTML to PDF",
+    "DOCX Template Filler",
+    "Email Template Generator",
+    "Generate Invoice",
+    "Generate Receipt",
+    "Generate PPTX",
+    "JSON to Excel",
+    "CSV to JSON",
+    "Excel to JSON",
+    "Generate QR Code",
+    "Send Email",
+    "Send Webhook",
+    "DOCX to Markdown"
+  ],
+  "apiEndpoints": {
+    "toolEndpoints": 22,
+    "adminEndpoints": 3,
+    "userEndpoints": 3,
+    "totalEndpoints": 28
+  },
+  "pages": {
+    "dashboardPages": 7,
+    "adminPages": 3,
+    "publicPages": 5,
+    "authPages": 4,
+    "totalPages": 19
+  },
+  "dependencies": {
+    "production": 17,
+    "development": 7,
+    "total": 24
+  },
+  "keyDependencies": [
+    "@modelcontextprotocol/sdk",
+    "@supabase/supabase-js",
+    "@upstash/qstash",
+    "docx",
+    "docxtemplater",
+    "pdf-lib",
+    "pptxgenjs",
+    "qrcode",
+    "sharp",
+    "nodemailer",
+    "react-markdown",
+    "zod"
+  ],
+  "rating": {
+    "aggregateRating": 5.0,
+    "reviewCount": 1,
+    "maxRating": 5.0
+  },
+  "categories": [
+    "Developer Tools",
+    "Productivity",
+    "Utilities",
+    "AI Integration Platform"
+  ],
+  "supportedAIClients": [
+    "Claude",
+    "Cursor",
+    "Windsurf",
+    "Gemini"
+  ],
+  "protocols": [
+    "Model Context Protocol (MCP)",
+    "REST API"
+  ],
+  "generatedOn": "2026-07-11"
+}

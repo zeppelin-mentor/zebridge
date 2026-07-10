@@ -9,20 +9,21 @@ import {
   Sparkles,
   ArrowRight,
   ShieldAlert,
-  ArrowUpRight
+  ArrowUpRight,
+  Mail
 } from "lucide-react";
 
 interface ToolItem {
   name: string;
   slug: string;
-  category: "PDF" | "Images" | "Office" | "AI";
+  category: "PDF" | "Images" | "Office" | "AI" | "Comms";
   desc: string;
   premium: boolean;
   inputs: string[];
 }
 
 export default function ToolsCatalog() {
-  const [activeCategory, setActiveCategory] = useState<"PDF" | "Images" | "Office" | "AI">("PDF");
+  const [activeCategory, setActiveCategory] = useState<"PDF" | "Images" | "Office" | "AI" | "Comms">("PDF");
 
   const toolsList: ToolItem[] = [
     // PDF
@@ -110,6 +111,46 @@ export default function ToolsCatalog() {
       premium: false,
       inputs: ["receiptNumber (string)", "items (JSON string)", "total (string)", "toName (string)"] 
     },
+    { 
+      name: "DOCX to Markdown", 
+      slug: "docx-to-markdown", 
+      category: "Office", 
+      desc: "Converts Word documents to Markdown format — ideal for AI agent pipelines.", 
+      premium: false,
+      inputs: ["docxUrl (string)", "includeHeadings (boolean)"] 
+    },
+    { 
+      name: "CSV to JSON", 
+      slug: "csv-to-json", 
+      category: "Office", 
+      desc: "Parses CSV text into a structured JSON array with automatic header detection.", 
+      premium: false,
+      inputs: ["csv (string)", "delimiter (string)"] 
+    },
+    { 
+      name: "Excel to JSON", 
+      slug: "excel-to-json", 
+      category: "Office", 
+      desc: "Fetches a CSV/Excel file from a URL and converts it to a structured JSON array.", 
+      premium: false,
+      inputs: ["fileUrl (string)", "delimiter (string)"] 
+    },
+    { 
+      name: "DOCX Template Filler", 
+      slug: "docx-template-filler", 
+      category: "Office", 
+      desc: "Merges dynamic variables into a DOCX template using {variable} placeholder syntax.", 
+      premium: false,
+      inputs: ["templateUrl (string)", "variables (object)"] 
+    },
+    { 
+      name: "Generate PPTX", 
+      slug: "generate-pptx", 
+      category: "Office", 
+      desc: "Generates a full PowerPoint presentation with slides, bullet points, and themes.", 
+      premium: true,
+      inputs: ["presentationTitle (string)", "slides (array)", "theme (string)"] 
+    },
     
     // AI
     { 
@@ -135,15 +176,44 @@ export default function ToolsCatalog() {
       desc: "Generates high-resolution QR codes from text or URL inputs.", 
       premium: false,
       inputs: ["text (string)"] 
-    }
+    },
+
+    // Communication & Notifications
+    { 
+      name: "Send Email", 
+      slug: "send-email", 
+      category: "Comms", 
+      desc: "Sends an email via SMTP. Uses QStash for reliable delivery with automatic retries on failure.", 
+      premium: false,
+      inputs: ["to (email)", "subject (string)", "body (string)", "isHtml (boolean)"] 
+    },
+    { 
+      name: "Send Webhook", 
+      slug: "send-webhook", 
+      category: "Comms", 
+      desc: "Posts a notification message to Slack, Discord, or any custom webhook endpoint.", 
+      premium: false,
+      inputs: ["webhookUrl (string)", "message (string)", "platform (slack|discord|generic)"] 
+    },
+    { 
+      name: "Email Template", 
+      slug: "generate-email-template", 
+      category: "Comms", 
+      desc: "Generates a styled HTML email from structured inputs — ready to pass to send-email.", 
+      premium: false,
+      inputs: ["subject (string)", "heading (string)", "body (string)", "ctaText (string)", "ctaUrl (string)"] 
+    },
   ];
+
 
   const categories = [
     { id: "PDF" as const, label: "PDF Document Tools", icon: FileText },
     { id: "Images" as const, label: "Image Processing", icon: ImageIcon },
     { id: "Office" as const, label: "Office & Sheets", icon: Briefcase },
     { id: "AI" as const, label: "AI & Utilities", icon: Sparkles },
+    { id: "Comms" as const, label: "Communication", icon: Mail },
   ];
+
 
   const filteredTools = toolsList.filter(t => t.category === activeCategory);
 

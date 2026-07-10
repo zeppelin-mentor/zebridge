@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Play, 
   Upload, 
@@ -12,22 +12,30 @@ import {
   Search, 
   CheckCircle2, 
   Terminal as TermIcon,
-  RefreshCw
+  RefreshCw,
+  Mail,
+  Presentation,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface ToolItem {
   name: string;
   slug: string;
-  category: "PDF" | "Images" | "Office" | "AI";
+  category: "PDF" | "Images" | "Office" | "AI" | "Comms";
   desc: string;
   premium: boolean;
+  enabled: boolean;
 }
+
 
 export default function ToolsTab() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [selectedTool, setSelectedTool] = useState<ToolItem | null>(null);
+  const [enabledMap, setEnabledMap] = useState<Record<string, boolean>>({});
+  const [togglingSlug, setTogglingSlug] = useState<string | null>(null);
   
   // Execution Console State
   const [isExecuting, setIsExecuting] = useState(false);
@@ -41,30 +49,82 @@ export default function ToolsTab() {
   // Dynamic input state
   const [toolInputs, setToolInputs] = useState<Record<string, any>>({});
 
-  const toolsList: ToolItem[] = [
+  const baseTools = [
     // PDF
-    { name: "Merge PDFs", slug: "pdf-merge", category: "PDF", desc: "Combines multiple PDF documents into a single consolidated file.", premium: false },
-    { name: "Split PDF", slug: "pdf-split", category: "PDF", desc: "Splits pages from a PDF document into separate page extracts.", premium: false },
-    { name: "PDF to DOCX", slug: "pdf-to-docx", category: "PDF", desc: "Converts PDF documents to editable Microsoft Word format.", premium: false },
-    { name: "Markdown to PDF", slug: "markdown-to-pdf", category: "PDF", desc: "Converts Markdown formatted text into professional PDF documents.", premium: false },
-    { name: "HTML to PDF", slug: "html-to-pdf", category: "PDF", desc: "Converts HTML content into formatted PDF documents.", premium: false },
-    
+    { name: "Merge PDFs", slug: "pdf-merge", category: "PDF" as const, desc: "Combines multiple PDF documents into a single consolidated file.", premium: false },
+    { name: "Split PDF", slug: "pdf-split", category: "PDF" as const, desc: "Splits pages from a PDF document into separate page extracts.", premium: false },
+    { name: "PDF to DOCX", slug: "pdf-to-docx", category: "PDF" as const, desc: "Converts PDF documents to editable Microsoft Word format.", premium: false },
+    { name: "Markdown to PDF", slug: "markdown-to-pdf", category: "PDF" as const, desc: "Converts Markdown formatted text into professional PDF documents.", premium: false },
+    { name: "HTML to PDF", slug: "html-to-pdf", category: "PDF" as const, desc: "Converts HTML content into formatted PDF documents.", premium: false },
     // Images
-    { name: "Background Removal", slug: "remove-background", category: "Images", desc: "Removes background alpha mask from images using high-fidelity segmentation.", premium: true },
-    { name: "Image Upscaling", slug: "image-upscale", category: "Images", desc: "Doubles visual dimensions of inputs using super-resolution neural rendering.", premium: true },
-    
+    { name: "Background Removal", slug: "remove-background", category: "Images" as const, desc: "Removes background alpha mask from images using high-fidelity segmentation.", premium: true },
+    { name: "Image Upscaling", slug: "image-upscale", category: "Images" as const, desc: "Doubles visual dimensions of inputs using super-resolution neural rendering.", premium: true },
     // Office Documents
-    { name: "Text to DOCX", slug: "text-to-docx", category: "Office", desc: "Converts plain text content into formatted Microsoft Word documents.", premium: false },
-    { name: "JSON to Excel", slug: "json-to-excel", category: "Office", desc: "Converts JSON data arrays into Excel spreadsheet format (CSV).", premium: false },
-    { name: "Generate Receipt", slug: "generate-receipt", category: "Office", desc: "Creates professional receipt PDFs with itemized billing details.", premium: false },
-    
+    { name: "Text to DOCX", slug: "text-to-docx", category: "Office" as const, desc: "Converts plain text content into formatted Microsoft Word documents.", premium: false },
+    { name: "JSON to Excel", slug: "json-to-excel", category: "Office" as const, desc: "Converts JSON data arrays into Excel spreadsheet format (CSV).", premium: false },
+    { name: "Generate Receipt", slug: "generate-receipt", category: "Office" as const, desc: "Creates professional receipt PDFs with itemized billing details.", premium: false },
+    { name: "DOCX to Markdown", slug: "docx-to-markdown", category: "Office" as const, desc: "Converts Word documents to Markdown format — ideal for AI agent pipelines.", premium: false },
+    { name: "CSV to JSON", slug: "csv-to-json", category: "Office" as const, desc: "Parses CSV text into a structured JSON array with automatic header detection.", premium: false },
+    { name: "Excel to JSON", slug: "excel-to-json", category: "Office" as const, desc: "Fetches a CSV/Excel file from a URL and converts it to a JSON array.", premium: false },
+    { name: "DOCX Template Filler", slug: "docx-template-filler", category: "Office" as const, desc: "Merges dynamic variables into a DOCX template using {variable} placeholder syntax.", premium: false },
+    { name: "Generate PPTX", slug: "generate-pptx", category: "Office" as const, desc: "Generates a full PowerPoint presentation with slides, bullets, and themes.", premium: true },
     // AI
-    { name: "Invoice Generator", slug: "generate-invoice", category: "AI", desc: "Creates professional invoices with automated calculations and formatting.", premium: true },
-    { name: "OCR Extract Text", slug: "ocr-extract-text", category: "AI", desc: "Extracts text content from images using optical character recognition.", premium: true },
-    { name: "QR Code Generator", slug: "generate-qrcode", category: "AI", desc: "Generates high-resolution QR codes from text or URL inputs.", premium: false }
+    { name: "Invoice Generator", slug: "generate-invoice", category: "AI" as const, desc: "Creates professional invoices with automated calculations and formatting.", premium: true },
+    { name: "OCR Extract Text", slug: "ocr-extract-text", category: "AI" as const, desc: "Extracts text content from images using optical character recognition.", premium: true },
+    { name: "QR Code Generator", slug: "generate-qrcode", category: "AI" as const, desc: "Generates high-resolution QR codes from text or URL inputs.", premium: false },
+    // Communication
+    { name: "Send Email", slug: "send-email", category: "Comms" as const, desc: "Sends an email via SMTP with QStash reliable delivery and automatic retries.", premium: false },
+    { name: "Send Webhook", slug: "send-webhook", category: "Comms" as const, desc: "Posts a notification to Slack, Discord, or any custom webhook URL.", premium: false },
+    { name: "Email Template", slug: "generate-email-template", category: "Comms" as const, desc: "Generates a styled HTML email template from structured inputs.", premium: false },
   ];
 
-  const categories = ["All", "PDF", "Images", "Office", "AI"];
+  const toolsList: ToolItem[] = baseTools.map(t => ({
+    ...t,
+    enabled: enabledMap[t.slug] !== undefined ? enabledMap[t.slug] : true,
+  }));
+
+
+  const categories = ["All", "PDF", "Images", "Office", "AI", "Comms"];
+
+  // Load tool preferences on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const { data: { user } } = await createClient().auth.getUser();
+        if (!user) return;
+        const res = await fetch('/v1/user/tool-preferences', { credentials: 'include' });
+        if (!res.ok) return;
+        const json = await res.json();
+        const map: Record<string, boolean> = {};
+        (json.preferences || []).forEach((p: { tool_slug: string; enabled: boolean }) => {
+          map[p.tool_slug] = p.enabled;
+        });
+        setEnabledMap(map);
+      } catch { /* silently fail — default to all enabled */ }
+    };
+    loadPreferences();
+  }, []);
+
+  const toggleTool = useCallback(async (slug: string, currentEnabled: boolean) => {
+    if (togglingSlug) return;
+    const newEnabled = !currentEnabled;
+    setTogglingSlug(slug);
+    // Optimistic update
+    setEnabledMap(prev => ({ ...prev, [slug]: newEnabled }));
+    try {
+      await fetch('/v1/user/tool-preferences', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toolSlug: slug, enabled: newEnabled }),
+      });
+    } catch {
+      // Revert on failure
+      setEnabledMap(prev => ({ ...prev, [slug]: currentEnabled }));
+    } finally {
+      setTogglingSlug(null);
+    }
+  }, [togglingSlug]);
 
   const filteredTools = toolsList.filter(tool => {
     const matchesSearch = tool.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -857,33 +917,58 @@ export default function ToolsTab() {
         {/* Left Side: Tools Grid */}
         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredTools.map((tool) => (
-            <button
+            <div
               key={tool.slug}
-              onClick={() => selectToolForExecution(tool)}
-              className={`text-left rounded-2xl p-5 border transition-all duration-200 relative group flex flex-col justify-between h-40 ${
-                selectedTool?.slug === tool.slug
+              className={`text-left rounded-2xl border transition-all duration-200 relative group flex flex-col justify-between h-44 overflow-hidden ${
+                !tool.enabled
+                  ? "bg-slate-950/50 border-white/5 opacity-60"
+                  : selectedTool?.slug === tool.slug
                   ? "bg-slate-900 border-emerald-400/40 shadow-[0_0_20px_rgba(74,222,128,0.05)]"
                   : "bg-slate-900/30 border-white/5 hover:border-white/10 hover:bg-slate-900/40"
               }`}
             >
-              {tool.premium && (
-                <span className="absolute top-4 right-4 bg-sky-500/10 text-sky-400 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
-                  Pro Tool
-                </span>
-              )}
-              <div>
-                <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">{tool.category}</span>
-                <h4 className="text-sm font-bold text-white mt-1 group-hover:text-emerald-300 transition-colors">{tool.name}</h4>
-                <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">{tool.desc}</p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                <span>Slug: {tool.slug}</span>
-                <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                  Sandbox
-                  <Play className="h-2.5 w-2.5 fill-emerald-400" />
-                </span>
-              </div>
-            </button>
+              {/* Toggle switch — top-right */}
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleTool(tool.slug, tool.enabled); }}
+                disabled={togglingSlug === tool.slug}
+                title={tool.enabled ? 'Disable tool' : 'Enable tool'}
+                className="absolute top-3 right-3 z-10 flex items-center gap-1 transition-opacity"
+              >
+                {tool.enabled
+                  ? <ToggleRight className="h-5 w-5 text-emerald-400" />
+                  : <ToggleLeft className="h-5 w-5 text-slate-600" />}
+              </button>
+
+              {/* Card content — clickable only when enabled */}
+              <button
+                onClick={() => tool.enabled && selectToolForExecution(tool)}
+                disabled={!tool.enabled}
+                className="flex flex-col justify-between h-full w-full p-5 text-left"
+              >
+                {tool.premium && tool.enabled && (
+                  <span className="absolute top-4 right-12 bg-sky-500/10 text-sky-400 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                    Pro
+                  </span>
+                )}
+                <div>
+                  <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">{tool.category}</span>
+                  <h4 className={`text-sm font-bold mt-1 transition-colors ${
+                    tool.enabled ? 'text-white group-hover:text-emerald-300' : 'text-slate-500'
+                  }`}>{tool.name}</h4>
+                  <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">{tool.desc}</p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-slate-500">/{tool.slug}</span>
+                  {tool.enabled ? (
+                    <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                      Sandbox <Play className="h-2.5 w-2.5 fill-emerald-400" />
+                    </span>
+                  ) : (
+                    <span className="text-slate-600">Disabled</span>
+                  )}
+                </div>
+              </button>
+            </div>
           ))}
         </div>
 
